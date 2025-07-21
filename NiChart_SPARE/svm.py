@@ -263,6 +263,11 @@ def infer_svm_model(input_file,
     print("Loading prediction data...")
     df = load_csv_data(input_file, drop_columns=drop_columns)
 
+    # *(TBF) in case non-encoded Sex column in the input df
+    if "Sex" in df.columns and "Sex_M" not in df.columns:
+        if "M" in df['Sex'].unique():
+            df['Sex_M'] = df['Sex'].apply(lambda x: 1 if x=='M' else 'F')
+
     # Check all columns exist in the input file
     for nf in meta_data['training_data_description']['feature_names']:
         if nf not in df.columns:
