@@ -324,7 +324,9 @@ def infer_svm_model(input_file,
     output_df = pd.DataFrame()
     output_df[key_variable] = df[key_variable]
     output_df['SPARE_'+spare_type] = predictions
-    output_df['SPARE_'+spare_type+'_decision_function'] = model.decision_function(X)
+    
+    if spare_type in ['CL','AD']:
+        output_df['SPARE_'+spare_type+'_decision_function'] = model.decision_function(X)
 
     if meta_data['training_data_description']['target_column'] in df.columns:
         output_df['GT_'+spare_type] = y
