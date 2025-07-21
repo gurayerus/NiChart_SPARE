@@ -124,12 +124,11 @@ def preprocess_classification_data(
     # target_encoder: StandardScaler = None # for inference
 ):
     X, y = (None, None)
-    
-    # Separate features and target
-    X = df.drop([target_column],axis=1)
-    y = df[target_column]
 
     if for_training == True:
+         # Separate features and target
+        X = df.drop([target_column],axis=1)
+        y = df[target_column]
         feature_encoder, feature_scaler = (None, None)
         """Preprocess data for training: handle missing values and encode categorical featurs & targets."""
         df = df.dropna(subset=[target_column]) # Remove rows with missing target values

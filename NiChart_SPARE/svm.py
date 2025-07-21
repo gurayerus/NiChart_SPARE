@@ -319,9 +319,11 @@ def infer_svm_model(input_file,
     output_df = pd.DataFrame()
     output_df[key_variable] = df[key_variable]
     output_df['SPARE_'+spare_type] = predictions
+    output_df['SPARE_'+spare_type+'_decision_function'] = model.decision_function(X)
 
-    if y.all() != None:
-        output_df['GT_'+spare_type] = y
+    if y != None:
+        if y.all() != None:
+            output_df['GT_'+spare_type] = y
     
     # Save predictions
     output_df.to_csv(output_file, index=False)
