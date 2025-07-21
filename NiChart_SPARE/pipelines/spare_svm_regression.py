@@ -109,18 +109,25 @@ def train_svr_model(
     cv_indexes = {}
     if get_cv_scores:
         print(f"Initiating {cv_fold}-fold CV")
-        
+        repeat=1
+        for r in range(repeat):
+            cv_scores["Repeat_%d"%r] = {'scores':{},
+                                        'cv_results':{}}
         cv = RepeatedKFold(n_splits=cv_fold, 
-                           n_repeats=1,
+                           n_repeats=repeat,
                            random_state=random_state)
         
         for i, (train_index, test_index) in enumerate(cv.split(X, y)):
+            print(f"Iteration {i+1} Repeat {(i+1)//cv_fold} Fold {i % cv.n_repeats}")
             # Save indexes per fold
-            cv_indexes["Fold_%d" % (i % cv.n_repeats)] = {'train_index':train_index,'test_index':test_index}
+            # cv_indexes["Fold_%d" % (i % cv.n_repeats)] = {'train_index':train_index,'test_index':test_index}
+            df_cv_result_per_fold = pd.DataFrame()
 
             X_train, X_test = X.loc[train_index], X.loc[test_index]
             y_train, y_test = y.loc[train_index], y.loc[test_index]
             
+            df_cv_result_per_fold['test_reference'] = y_test
+
             # Train model with current parameters
             if kernel == 'linear_fast':
                 model = LinearSVR(**base_params)
@@ -132,33 +139,48 @@ def train_svr_model(
             # Predict
             y_pred_train = model.predict(X_train)
             y_pred_test = model.predict(X_test)
+            
+            df_cv_result_per_fold['test_prediction'] = y_pred_test
+
+            cv_metric = report_regression_metrics(y_test, y_pred_test)
+            print(f"Pre-correction: {cv_metric}")
+
             # correct for bias
-            if bias_correction != None:
-                cv_metric = report_regression_metrics(y_test, y_pred_test)
-                print(f"Pre-correction: Iteration {i+1} Repeat {(i+1)//cv_fold} Fold {i % cv.n_repeats} metrics: {cv_metric}")
+            if bias_correction not in [None, 0]:
                 if bias_correction==1:
-                    print("Correcting bias (residual approach)")
+                    # print("Correcting bias (residual approach)")
+                    cb_method = 'residual approach'
                     residuals = y_train - y_pred_train
                     lin_fit = LinearRegression().fit(y_train.to_frame(), residuals)
                     m, c = lin_fit.coef_[0], lin_fit.intercept_
                     y_pred_test = y_pred_test - lin_fit.predict(y_pred_test.reshape(-1,1))
 
                 elif bias_correction==2:
-                    print("Correcting bias (Cole et al.)")
+                    # print("Correcting bias (Cole et al.)")
+                    cb_method = 'Cole et al.'
                     reg = LinearRegression().fit(y_train.values.reshape(-1, 1), y_pred_train)
                     m, c = reg.coef_[0], reg.intercept_
                     y_pred_test = (y_pred_test - c) / m
-                
-            # Get validation metrics
-            cv_metric = report_regression_metrics(y_test, y_pred_test)
-            print(f"Iteration {i} Repeat {(i)//cv_fold} Fold {i % cv_fold} metrics: {cv_metric}")
+
+                df_cv_result_per_fold['test_prediction_BC'] = y_pred_test
+                cv_metric = report_regression_metrics(y_test, y_pred_test)
+                print(f"Post-correction {cb_method}: {cv_metric}\n")
+            else:
+                print("Skipping Bias Correction\n")    
+            # # Get validation metrics
+            # cv_metric = report_regression_metrics(y_test, y_pred_test)
+            # print(f"Iteration {i} Repeat {(i)//cv_fold} Fold {i % cv_fold} metrics: {cv_metric}\n")
+            
             # Save the scores
-            cv_scores["Fold_%d" % (i % cv.n_repeats)] = cv_metric
+            # cv_scores["Fold_%d" % (i % cv_fold)] = cv_metric
+            df_cv_result_per_fold['fold'] = i % cv_fold
+            cv_scores['Repeat_%d' % ((i)//cv_fold)]['scores']["Fold_%d" % (i % cv_fold)] = cv_metric
+            cv_scores['Repeat_%d' % ((i)//cv_fold)]['cv_results']["Fold_%d" % (i % cv_fold)] = df_cv_result_per_fold
+
             # Update the best performing model based off of ROC-AUC
             if cv_metric['MSE'] > best_cv_score:
                 best_cv_model = model
                 best_cv_score = cv_metric['MSE']
-            
 
     # Train model using the best parameter and whole set
     if train_whole_set:
@@ -193,8 +215,8 @@ def train_svr_model(
         elif get_cv_scores:
             model = best_cv_model
 
-    cv_info['CV_Indexes'] = cv_indexes
-    cv_info['CV_Scores'] = cv_scores
+    # cv_info['CV_Indexes'] = cv_indexes
+    # cv_info['CV_Scores'] = cv_scores
 
     # Return model and the CV scores
-    return model, bias_terms, hyperparameter_tuning, cv_info
+    return model, bias_terms, hyperparameter_tuning, cv_scores
