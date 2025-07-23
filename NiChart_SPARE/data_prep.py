@@ -55,6 +55,21 @@ def encode_feature_df(df: pd.DataFrame):
         return pd.concat([df[~df.columns.isin(object_cols)], df_oc], axis=1)[columns_in_order], encoders
     else:
         return df, None
+    
+# Scale features
+def scale_feature_df(df: pd.DataFrame):
+    X = df.copy()
+    scalers={}
+    for c in X.columns:
+        if c != 'Sex_M':
+            scaler = StandardScaler()
+            scaler.fit(X[c].to_numpy().reshape(-1,1))
+            scalers[c] = scaler
+            X[c] = scaler.transform(X[c].to_numpy().reshape(-1,1))
+        else:
+            X[c] = X[c].astype(float)
+    return X, scalers
+
 
 # Prepare data for regressor training and testing
 # df: dataframe containing only essential columns + target column
@@ -86,8 +101,9 @@ def preprocess_regression_data(
         # Scale features if requested
         if scale_features:
             print(f"Scaling the features.")
-            feature_scaler = StandardScaler()
-            X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            # feature_scaler = StandardScaler()
+            # X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            X, feature_scaler = scale_feature_df(X)
 
     else:
         """Preprocess data for inference: handle missing values and encode categorical features."""
@@ -102,10 +118,11 @@ def preprocess_regression_data(
         
         if feature_encoder != None:
             for ec in feature_encoder.keys():
-                X[ec] = feature_encoder[ec].fit_transform(X[ec])
+                X[ec] = feature_encoder[ec].transform(X[ec])
         
         if feature_scaler != None:
-            X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            for fs in feature_scaler.keys():
+                X[fs] = feature_scaler[fs].transform(X[fs])
     
     return X, y, feature_encoder, feature_scaler #, target_scaler
 
