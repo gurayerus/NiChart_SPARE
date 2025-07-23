@@ -122,7 +122,7 @@ def preprocess_regression_data(
         
         if feature_scaler != None:
             for fs in feature_scaler.keys():
-                X[fs] = feature_scaler[fs].transform(X[fs])
+                X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
     
     return X, y, feature_encoder, feature_scaler #, target_scaler
 
