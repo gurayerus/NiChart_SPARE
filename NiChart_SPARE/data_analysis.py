@@ -257,21 +257,17 @@ def ba_effect_analysis(df_ba = None,
                        df_covars = None,
                        key_variable='MRID',
                        col_ref_age='Age',
-                       output_visualization_path=None):
-    df_merged = df_covars[key_variable,col_ref_age].merge(df_ba[[key_variable,col_ba]],on=key_variable,how='inner')
+                       ax=None):
+    
+    df_merged = df_covars[[key_variable,col_ref_age]].merge(df_ba[[key_variable,col_ba]],on=key_variable,how='inner')
     df_merged = df_merged.merge(df_disease[[key_variable,col_disease]],on=key_variable,how='inner').dropna().reset_index(drop=True)
     df_merged['BA_Gap'] = df_merged[col_ba] - df_merged[col_ref_age]
     
-    cohens_d = cohen_d(df_merged['BA_Gap'],df_merged[col_disease])
+    cohens_d = "%.3f" % cohen_d(df_merged['BA_Gap'],df_merged[col_disease])
     t,p = t_test(df_merged['BA_Gap'],df_merged[col_disease])
 
-    plt.figure()
-    sns.displot(data=df_merged,x='Age_Delta',hue='disease', kind="kde")
-    plt.title(f"Cohen's d: {cohens_d}, t: {t}, p: {p}")
-    if os.path.exists(output_visualization_path):
-        plt.savefig(output_visualization_path)
-    else:
-        plt.show()
+    sns.histplot(data=df_merged,x='BA_Gap',hue='disease',ax=ax)
+    ax.set_title(f"Cohen's d: {cohens_d}, \nt: {t}, p: {p}")
 
 
 ####################################

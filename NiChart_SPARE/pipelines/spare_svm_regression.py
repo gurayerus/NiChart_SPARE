@@ -104,9 +104,9 @@ def train_svr_model(
         print(f"Hyperparameter selection skipped...")
 
     # Perform another CV using the best parameter if get_cv_score parameter is True
-    cv_info = {}
+    # cv_info = {}
     cv_scores = {}
-    cv_indexes = {}
+    # cv_indexes = {}
     if get_cv_scores:
         print(f"Initiating {cv_fold}-fold CV")
         repeat=1
@@ -118,7 +118,7 @@ def train_svr_model(
                            random_state=random_state)
         
         for i, (train_index, test_index) in enumerate(cv.split(X, y)):
-            print(f"Iteration {i+1} Repeat {(i+1)//cv_fold} Fold {i % cv.n_repeats}")
+            # print(f"Iteration {i+1} Repeat {(i+1)//cv_fold} Fold {i % cv.n_repeats}")
             # Save indexes per fold
             # cv_indexes["Fold_%d" % (i % cv.n_repeats)] = {'train_index':train_index,'test_index':test_index}
             df_cv_result_per_fold = pd.DataFrame()
@@ -143,7 +143,8 @@ def train_svr_model(
             df_cv_result_per_fold['test_prediction'] = y_pred_test
 
             cv_metric = report_regression_metrics(y_test, y_pred_test)
-            print(f"Pre-correction: {cv_metric}")
+            print(f"Iteration {i} Repeat {(i)//cv_fold} Fold {i % cv_fold} metrics: {cv_metric}")
+            # print(f"Pre-correction: {cv_metric}")
 
             # correct for bias
             if bias_correction not in [None, 0]:
