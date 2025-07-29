@@ -102,16 +102,6 @@ def get_linear_svm_feature_importance(model,
     return importance_df
 
 
-# Calculate the effect size of a disease for brain age model
-# Optional figure generation for different disease classes
-def ba_disease_effect_analysis(df, 
-                               age_column = 'Age',
-                               ba_columns = 'SPARE_BA',
-                               disease_column='DX', 
-                               export_figure=False):
-    return 
-
-
 # Partial Dependency Plot
 from sklearn.inspection import PartialDependenceDisplay
 import matplotlib.pyplot as plt
@@ -241,13 +231,11 @@ def t_test(sample1, sample2, equal_variance=True):
   return t_statistic, p_value
 
 
-def cohen_d(x,y):
-    nx = len(x)
-    ny = len(y)
-    dof = nx + ny - 2
-    return (np.mean(x) - np.mean(y)) / np.sqrt(((nx-1)*np.std(x, ddof=1) ** 2 + (ny-1)*np.std(y, ddof=1) ** 2) / dof)
+def cohen_d(a,b):
+   pooled_std = np.sqrt(((a.std()**2)+(b.std()**2)) / 2)
+   return (a.mean() - b.mean()) / pooled_std
 
-import os
+
 import seaborn as sns
 # For disease effect analysis. 
 def ba_effect_analysis(df_ba = None, 
@@ -257,17 +245,22 @@ def ba_effect_analysis(df_ba = None,
                        df_covars = None,
                        key_variable='MRID',
                        col_ref_age='Age',
-                       ax=None):
+                       ax=None,
+                       title=None):
     
     df_merged = df_covars[[key_variable,col_ref_age]].merge(df_ba[[key_variable,col_ba]],on=key_variable,how='inner')
     df_merged = df_merged.merge(df_disease[[key_variable,col_disease]],on=key_variable,how='inner').dropna().reset_index(drop=True)
     df_merged['BA_Gap'] = df_merged[col_ba] - df_merged[col_ref_age]
     
-    cohens_d = "%.3f" % cohen_d(df_merged['BA_Gap'],df_merged[col_disease])
+    cohens_d = "%.3f" % cohen_d(df_merged[df_merged[col_disease]==1]['BA_Gap'],df_merged[df_merged[col_disease]==0]['BA_Gap'])
     t,p = t_test(df_merged['BA_Gap'],df_merged[col_disease])
+    t = "%.3f" % t
+    p = "%.2e" % p
 
-    sns.histplot(data=df_merged,x='BA_Gap',hue='disease',ax=ax)
-    ax.set_title(f"Cohen's d: {cohens_d}, \nt: {t}, p: {p}")
+    df_merged[col_disease] = df_merged[col_disease].apply(lambda x: 'Control' if x==0 else 'Patient')
+    sns.kdeplot(data=df_merged,x='BA_Gap',hue='disease',ax=ax)
+    ax.set_title(f"{title}Cohen's d: {cohens_d}, t: {t}, p: {p}")
+    ax.set_xlim([-30,30])
 
 
 ####################################

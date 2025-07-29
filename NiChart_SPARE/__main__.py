@@ -49,7 +49,7 @@ def main():
                        help='SVM kernel type (linear, poly, rbf, sigmoid)')
     # parser.add_argument('-bc', '--bias_correction', type=str, default='False',
     #                    help='Perform bias correction for linearSVM (linear_fast) models.')
-    parser.add_argument('-bc', '--bias_correction', type=str, default='1',
+    parser.add_argument('-bc', '--bias_correction', required=False, type=str, default='1',
                        help='Perform bias correction for regression task. 0 for disabling. 1 for Beheshti et al. 2 for Cole et al.')
     ## MLP specific
     ### TBA
