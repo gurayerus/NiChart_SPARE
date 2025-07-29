@@ -183,7 +183,8 @@ def preprocess_classification_data(
                 X[ec] = feature_encoder[ec].fit_transform(X[ec])
         
         if feature_scaler != None:
-            X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            for fs in feature_scaler.keys():
+                X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
 
     return X, y, feature_encoder, feature_scaler #, target_encoder
 
