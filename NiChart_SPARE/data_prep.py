@@ -48,11 +48,12 @@ def encode_feature_df(df: pd.DataFrame):
         encoders = {}
         for oc in object_cols:
             encoder = LabelEncoder()
-            df_oc.loc[:, oc] = encoder.fit_transform(df_oc[oc].values)
+            df_oc.loc[:, oc] = encoder.fit_transform(df_oc[oc].to_numpy())
+            
             encoders[oc] = encoder
         #df_encoded = pd.DataFrame(df_oc, columns=object_cols, index=df.index)
-
-        return pd.concat([df[~df.columns.isin(object_cols)], df_oc], axis=1)[columns_in_order], encoders
+        print(df.shape, df_oc.shape)
+        return pd.concat([df[df.columns[~df.columns.isin(object_cols)]], df_oc], axis=1)[columns_in_order], encoders
     else:
         return df, None
     
@@ -61,7 +62,7 @@ def scale_feature_df(df: pd.DataFrame):
     X = df.copy()
     scalers={}
     for c in X.columns:
-        if c != 'Sex_M':
+        if c not in ['Sex','Sex_M']:
             scaler = StandardScaler()
             scaler.fit(X[c].to_numpy().reshape(-1,1))
             scalers[c] = scaler
@@ -144,7 +145,7 @@ def preprocess_classification_data(
 
     if for_training == True:
          # Separate features and target
-        X = df.drop([target_column],axis=1)
+        X = df.drop(columns=[target_column])
         y = df[target_column]
         feature_encoder, feature_scaler = (None, None)
         """Preprocess data for training: handle missing values and encode categorical featurs & targets."""
@@ -157,8 +158,9 @@ def preprocess_classification_data(
         # Scale features if requested
         if scale_features:
             print(f"Scaling the features.")
-            feature_scaler = StandardScaler()
-            X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            # feature_scaler = StandardScaler()
+            # X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            X, feature_scaler = scale_feature_df(X)
 
         # # Encode target labels if they're not numeric and encoding is requested
         # if encode_categorical_target and y.dtype == 'object':
@@ -181,7 +183,8 @@ def preprocess_classification_data(
                 X[ec] = feature_encoder[ec].fit_transform(X[ec])
         
         if feature_scaler != None:
-            X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
+            for fs in feature_scaler.keys():
+                X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
 
     return X, y, feature_encoder, feature_scaler #, target_encoder
 
