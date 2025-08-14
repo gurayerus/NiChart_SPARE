@@ -72,7 +72,7 @@ def main():
                          help='Name of column indicating unique disease')
     # data preprocessing arguments
     parser.add_argument('-kv', '--key_variable',
-                       help='Name of column indicating unique data points in the input CSV')
+                       help='Name of column indicating unique data points in the input CSV', default="MRID")
     parser.add_argument('-tc', '--target_column', default='target',
                        help='Name of target column in CSV')
     parser.add_argument('-ic', '--ignore_column', default='',
