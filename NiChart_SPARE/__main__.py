@@ -38,22 +38,27 @@ def main():
     parser.add_argument('-a', '--action', required=True, choices=['trainer', 'inference', 'analysis'],
                        help='Action to perform: trainer, inference, or analysis')
     parser.add_argument('-t', '--type', required=True, 
-                       help='SPARE type: BA (Brain Age), AD (Alzheimer\'s), HT (Hypertension)')
+                       help="SPARE type: CL (Classfication), RG (Regression), BA (Brain Age), AD (Alzheimer\'s),\n CVM (Cardiovascular and metabolic (Govindarajan et al.))")
     parser.add_argument('-i', '--input', required=True,
                        help='Input CSV file path')
     # Model specific arguments
-    parser.add_argument('-mt', '--model_type', default='SVM',
+    parser.add_argument('-mt', '--model_type', type=str, default='SVM',
                         help='Type of ML model. Currently supported: SVM')
     ## SVM specific
-    parser.add_argument('-sk', '--svm_kernel', default='linear',
+    parser.add_argument('-sk', '--svm_kernel', type=str, default='linear',
                        help='SVM kernel type (linear, poly, rbf, sigmoid)')
     # parser.add_argument('-bc', '--bias_correction', type=str, default='False',
     #                    help='Perform bias correction for linearSVM (linear_fast) models.')
     parser.add_argument('-bc', '--bias_correction', required=False, type=str, default='1',
                        help='Perform bias correction for regression task. 0 for disabling. 1 for Beheshti et al. 2 for Cole et al.')
+    # ICV correction
+    parser.add_argument('-icv','--icv_correction', type=str, default='False',
+                        help='Perform ICV correction (all ROI features divided by ICV). (True/False)')
+    parser.add_argument('-icvc','--icv_column', type=str, default='DL_MUSE_Volume_702',
+                        help='Name of the ICV column in the input csv.')
     ## MLP specific
     ### TBA
-    # Train/Test specifci arguments
+    # Train/Test specific arguments
     parser.add_argument('-ht', '--hyperparameter_tuning', type=str, default='True',
                        help='Perform hyperparameter tuning job. Takes a while. (True/False)')
     parser.add_argument('-tw', '--train_whole', type=str, default='True',
@@ -89,7 +94,8 @@ def main():
     tune_hyperparameters = args.hyperparameter_tuning.lower() == 'true'
     train_whole_set = args.train_whole.lower() == 'true'
     class_balancing = args.class_balancing.lower() == 'true'
-    # bias_correction = args.bias_correction.lower() == 'true'
+    icv_correction = args.icv_correction.lower() == 'true'
+
     bias_correction = int(args.bias_correction)
     cross_validate = int(args.cv_fold) != 0
     
@@ -120,6 +126,7 @@ def main():
                     cross_validate=cross_validate,
                     train_whole_set=train_whole_set,
                     bias_correction=bias_correction,
+                    icv_correction = icv_correction,
                     drop_columns=ignore_columns + [args.key_variable],
                     verbose=args.verbose
                 )

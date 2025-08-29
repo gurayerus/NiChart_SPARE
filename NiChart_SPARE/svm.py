@@ -97,6 +97,10 @@ def train_svm_model(input_file,
                     class_balancing,
 					train_whole_set, 
                     bias_correction,
+                    icv_correction,
+                    icv_col="DL_MUSE_Volume_702",
+                    age_col='Age',
+                    sex_col='Sex',
 					drop_columns=None,
                     verbose=1):
     
@@ -126,6 +130,11 @@ def train_svm_model(input_file,
     # Initialize variables
     feature_encoder, feature_scaler = (None, None)
 
+    # Perform ICV correction across all ROIs if asked
+    from .data_prep import correct_icv
+    if icv_correction:
+        df = correct_icv(df, icv_col = icv_col, roi_col_keyword='DL_MUSE_Volume_')
+    
     # Regression tasks
     if spare_type in ['RG','BA']:
         # Preprocess data (no label encoding for regression)
@@ -189,6 +198,45 @@ def train_svm_model(input_file,
         else:
             print(f"Unsupported SVM kernel entry. Please select among: linear, poly, rbf, sigmoid.")
 
+    # for SPARE-CVMs
+    elif spare_type in ['CVM','HT','T2B','SM','BMI']:
+        # Input validation
+        print(f"Validating input...")
+        validate_dataframe(df, target_column)
+        print(f"Success.")
+        
+        # Preprocess the input df, split into X, y
+        print(f"Preprocessing the input with Age, Sex, ICV residualization...{df.shape}")
+        from .data_prep import apply_cvm_residualization
+        df, features = apply_cvm_residualization(df, 
+                                                 age_col=age_col,
+                                                 sex_col=sex_col,
+                                                 dlicv_col=icv_col)
+        df = df[features]
+        X, y, feature_encoder, feature_scaler = preprocess_classification_data(
+            df, 
+            target_column = target_column, 
+            encode_categorical_features=True,
+            scale_features=True,
+            # encode_categorical_target=False,
+            for_training=True)
+        print(f"Input preprocessing completed.")
+
+        # Training
+        if kernel.lower() in ['linear_fast','linear','poly', 'rbf', 'sigmoid']:
+            model, ht, cv = pipeline_module.train_svc_model(
+                X,
+                y,
+                kernel=kernel,
+                tune_hyperparameters=tune_hyperparameters,
+                cv_fold=cv_fold,
+                class_balancing=class_balancing,
+                get_cv_scores=cross_validate,
+                train_whole_set=train_whole_set
+                )
+        else:
+            print(f"Unsupported SVM kernel entry. Please select among: linear, poly, rbf, sigmoid.")
+        
     else:
         print(f"{spare_type} is not supported.")
         sys.exit(1)
@@ -249,6 +297,9 @@ def infer_svm_model(input_file,
                     spare_type, 
                     output_file, 
                     key_variable='MRID',
+                    icv_col="DL_MUSE_Volume_702",
+                    age_col='Age',
+                    sex_col='Sex_M',
                     drop_columns=None):
     """Make predictions using trained model"""
     
@@ -284,6 +335,10 @@ def infer_svm_model(input_file,
 
     print(f"Preprocessing the input...{df.shape}")
 
+    # Perform ICV correction across all ROIs if asked
+
+    # Perform Age, Sex, ICV residualization if asked
+
     # Regression task
     if spare_type in ['RG','BA']:
         X, y, _, _ = preprocess_regression_data( 
@@ -294,7 +349,7 @@ def infer_svm_model(input_file,
             for_training=False
             )
         print(f"Input preprocessing completed. Feature shape: {X.shape}")
-        pass        
+        # pass        
     # Classification task 
     elif spare_type in ['CL','AD']:
         # Preprocess data
@@ -307,8 +362,20 @@ def infer_svm_model(input_file,
             for_training=False
             )
         print(f"Input preprocessing completed. Feature shape: {X.shape}")
-    
-    
+    elif spare_type in ['CVM','HT','T2B','SM','BMI']:
+        from .data_prep import apply_cvm_residualization
+        df, features = apply_cvm_residualization(df, 
+                                                 age_col=age_col,
+                                                 sex_col=sex_col,
+                                                 dlicv_col=icv_col)
+        df = df[features]
+        X, y, _, _ = preprocess_classification_data( 
+            df = df.drop([key_variable],axis=1),
+            target_column = meta_data['training_data_description']['target_column'],
+            feature_encoder = preprocessor['feature_encoder'],
+            feature_scaler= preprocessor['feature_scaler'],
+            for_training=False
+            )
     # Get prediction
     predictions = model.predict(X)
     # Correct for bias

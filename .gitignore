@@ -9,3 +9,4 @@ notebooks/
 !Resources/covparams_scaler_sparecvms.csv
 *.ipynb
 */legacy_models/
+*/noCB/

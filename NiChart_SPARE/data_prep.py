@@ -8,9 +8,9 @@
 import os
 import pandas as pd
 import numpy as np
-import joblib
+# import joblib
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.utils import column_or_1d
+# from sklearn.utils import column_or_1d
 
 
 # ############# DATA CHECK ##############
@@ -56,7 +56,19 @@ def encode_feature_df(df: pd.DataFrame):
         return pd.concat([df[df.columns[~df.columns.isin(object_cols)]], df_oc], axis=1)[columns_in_order], encoders
     else:
         return df, None
-    
+
+# Perform ICV correction
+def correct_icv(df: pd.DataFrame, icv_col: str = "DL_MUSE_Volume_702", roi_col_keyword: str = "DL_MUSE_Volume_"):
+    roi_columns = [col for col in df.columns if roi_col_keyword in col and col != roi_col_keyword]
+    if icv_col in df.columns and len(roi_columns) > 0:
+        non_roi_columns = [col for col in df.columns if col not in roi_columns and col != roi_col_keyword]
+        df_roi_icv_corrected = df[roi_columns] / df[icv_col]
+        if non_roi_columns != []:
+            df_roi_icv_corrected = pd.concat([df[non_roi_columns],df_roi_icv_corrected],axis=1)
+        return df_roi_icv_corrected[[c for c in df.columns if c != icv_col]]
+    else:
+        raise("Failed to perform ICV correction as ROI column or ICV column does not exist")
+
 # Scale features
 def scale_feature_df(df: pd.DataFrame):
     X = df.copy()
@@ -79,6 +91,8 @@ def preprocess_regression_data(
     target_column: str,
     encode_categorical_features: bool = True,
     scale_features: bool = True,
+    # icv_correction: bool = False,
+    # icv_column: str = '',
     for_training: bool = True,
     feature_encoder: LabelEncoder = None, # for inference
     feature_scaler: StandardScaler = None, # for inference
@@ -102,8 +116,6 @@ def preprocess_regression_data(
         # Scale features if requested
         if scale_features:
             print(f"Scaling the features.")
-            # feature_scaler = StandardScaler()
-            # X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
             X, feature_scaler = scale_feature_df(X)
 
     else:
@@ -135,21 +147,22 @@ def preprocess_classification_data(
     target_column: str,
     encode_categorical_features: bool = True,
     scale_features: bool = True,
-    # encode_categorical_target: bool = False,
+    # icv_correction: bool = False,
+    # icv_column: str = '',
     for_training: bool = True,
     feature_encoder: LabelEncoder = None, # for inference
     feature_scaler: StandardScaler = None, # for inference
-    # target_encoder: StandardScaler = None # for inference
 ):
     X, y = (None, None)
 
     if for_training == True:
-         # Separate features and target
+        """Preprocess data for training: handle missing values and encode categorical featurs & targets."""
+        feature_encoder, feature_scaler = (None, None)
+        df = df.dropna(subset=[target_column]) # Remove rows with missing target values
+        
+        # Separate features and target
         X = df.drop(columns=[target_column])
         y = df[target_column]
-        feature_encoder, feature_scaler = (None, None)
-        """Preprocess data for training: handle missing values and encode categorical featurs & targets."""
-        df = df.dropna(subset=[target_column]) # Remove rows with missing target values
         
         # Encode feature labels if they're not numeric and encoding is requested
         if encode_categorical_features:
@@ -158,16 +171,8 @@ def preprocess_classification_data(
         # Scale features if requested
         if scale_features:
             print(f"Scaling the features.")
-            # feature_scaler = StandardScaler()
-            # X = pd.DataFrame(feature_scaler.fit_transform(X), columns=X.columns, index=X.index)
             X, feature_scaler = scale_feature_df(X)
 
-        # # Encode target labels if they're not numeric and encoding is requested
-        # if encode_categorical_target and y.dtype == 'object':
-        #     print(f"Encoding the categorical label")
-        #     target_encoder = LabelEncoder()
-        #     y = target_encoder.fit_transform(y)
-    
     else:
         """Preprocess data for inference: handle missing values and encode categorical features."""
         # Check if ground truth is provided in the df, if so, drop it.
@@ -188,40 +193,46 @@ def preprocess_classification_data(
 
     return X, y, feature_encoder, feature_scaler #, target_encoder
 
+import warnings
 
-# def apply_cvm_residualization(df: pd.DataFrame, 
-#                               age_col='Age', 
-#                               sex_col='Sex', 
-#                               dlicv_col='702'):
-    
-#     df_params = pd.read_csv(os.path.join('../Reference', 'covparams_scaler_sparecvms.csv'))
-    
-#     rois = df_params.loc[df_params['Features'].str.contains('Volume'),'Features']
-    
-#     meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
-    
-#     df['Age_Original'] = df['Age'].copy(deep=True)
-#     df['Mean_centered_age'] = df['Age_Original']-meanage
-#     df['DLICV_Original'] = df[dlicv_col].copy(deep=True)
-    
-#     if 'Sex_M' not in df.columns and 0 not in df[sex_col].unique():
-#         df['Sex_M'] = df[sex_col].map({'F':0,'M':1})
-    
-#     features = [age_col, dlicv_col] + [roi for roi in rois]
-#     confounds = ['Sex_M', 'Mean_centered_age', 'DLICV']
+def apply_cvm_residualization(df: pd.DataFrame, 
+                              age_col='Age', 
+                              sex_col='Sex', 
+                              dlicv_col='702'):
+    warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+    df_params = pd.read_csv(os.path.join('../Reference', 'covparams_scaler_sparecvms_dl.csv'))
+    df_params = df_params.rename(columns={'DLICV':dlicv_col})
+        
+    rois = df_params.loc[df_params['Features'].str.contains('H_DL_MUSE_Volume|DL_WMLS_Volume'),'Features']
 
-#     for roi in rois:
-#         df['Orig_' + roi] = df[roi].copy(deep = True)
-#         df['Pred_' + roi] = df_params.loc[df_params['Features'] == roi, 'Intercept'].values + np.matmul(df[confounds], df_params.loc[df_params['Features'] == roi, confounds].to_numpy().reshape(-1))
-#         df[roi] =  df['Orig_' + roi] - df['Pred_' + roi] 
+    df['Age_Original'] = df[age_col]#.copy(deep=True)
+    meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
 
-#     for ft in features:
-#         df[ft] = (df[ft] - df_params.loc[df_params['Features'] == ft, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == ft, 'Scaler_Var'].values)
+    df['Mean_centered_age'] = df['Age_Original']-meanage
+    df['DLICV_Original'] = df[dlicv_col].copy(deep=True)
 
-#     df = df.drop(columns = df.columns[df.columns.str.startswith('Pred')])
+    # Map Sex column
+    if 'Sex_M' not in df.columns:
+        df['Sex_M'] = df[sex_col].copy(deep=True)
+        if 0 not in df[sex_col].unique() and 'M' in df[sex_col].unique():
+            df['Sex_M'] = df[sex_col].map({'F':0,'M':1})
 
-#     features = features + [sex_col,]
+    features = [age_col, dlicv_col] + [roi for roi in rois if roi in df.columns]
+    confounds = ['Sex_M', 'Mean_centered_age', dlicv_col]
 
-#     return df, features
+    for roi in rois:
+        if roi in df.columns:
+            df['Orig_' + roi] = df[roi].copy(deep = True)
+            df['Pred_' + roi] = df_params.loc[df_params['Features'] == roi, 'Intercept'].values + np.matmul(df[confounds], df_params.loc[df_params['Features'] == roi, confounds].to_numpy().reshape(-1))
+            df[roi] =  df['Orig_' + roi] - df['Pred_' + roi] 
+
+    for ft in features:
+        df[ft] = (df[ft] - df_params.loc[df_params['Features'] == ft, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == ft, 'Scaler_Var'].values)
+
+    df = df.drop(columns = df.columns[df.columns.str.startswith('Pred')])
+
+    features = features + [sex_col,]
+
+    return df, features
 
 
