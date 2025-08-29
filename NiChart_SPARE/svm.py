@@ -328,8 +328,16 @@ def infer_svm_model(input_file,
 
     # subset for only needed columns
     if meta_data['training_data_description']['target_column'] in df.columns.tolist():
+        print(f"DEBUG: target_column is in df columns.")
+        print(f"DEBUG: key_variable: {key_variable}")
+        print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
+        print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
         df = df[[key_variable, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
     else:
+        print(f"DEBUG: target column is not in df columns.")
+        print(f"DEBUG: key_variable: {key_variable}")
+        print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
+        print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
         df = df[[key_variable] + meta_data['training_data_description']['feature_names']]
 
 
