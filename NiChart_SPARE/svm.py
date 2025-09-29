@@ -212,13 +212,12 @@ def train_svm_model(input_file,
                                                  age_col=age_col,
                                                  sex_col=sex_col,
                                                  dlicv_col=icv_col)
-        df = df[features]
+        df = df[features + [target_column]]
         X, y, feature_encoder, feature_scaler = preprocess_classification_data(
             df, 
             target_column = target_column, 
             encode_categorical_features=True,
             scale_features=True,
-            # encode_categorical_target=False,
             for_training=True)
         print(f"Input preprocessing completed.")
 

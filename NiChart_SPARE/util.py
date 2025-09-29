@@ -15,6 +15,7 @@ def get_pipeline_module(spare_type):
     module_map = {
         'CL': 'NiChart_SPARE.pipelines.spare_svm_classification',
         'RG': 'NiChart_SPARE.pipelines.spare_svm_regression',
+        'CVM' : 'NiChart_SPARE.pipelines.spare_svm_cvm'
         # 'AD': 'NiChart_SPARE.pipelines.spare_ad',
         # 'BA': 'NiChart_SPARE.pipelines.spare_ba',
         # 'HT': 'NiChart_SPARE.pipelines.spare_ht',

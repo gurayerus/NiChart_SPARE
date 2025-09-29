@@ -200,11 +200,12 @@ def apply_cvm_residualization(df: pd.DataFrame,
                               sex_col='Sex', 
                               dlicv_col='702'):
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-    df_params = pd.read_csv(os.path.join('../Reference', 'covparams_scaler_sparecvms_dl.csv'))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl.csv'))
     df_params = df_params.rename(columns={'DLICV':dlicv_col})
         
     rois = df_params.loc[df_params['Features'].str.contains('H_DL_MUSE_Volume|DL_WMLS_Volume'),'Features']
-
+    
     df['Age_Original'] = df[age_col]#.copy(deep=True)
     meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
 
@@ -219,7 +220,7 @@ def apply_cvm_residualization(df: pd.DataFrame,
 
     features = [age_col, dlicv_col] + [roi for roi in rois if roi in df.columns]
     confounds = ['Sex_M', 'Mean_centered_age', dlicv_col]
-
+    
     for roi in rois:
         if roi in df.columns:
             df['Orig_' + roi] = df[roi].copy(deep = True)
@@ -228,11 +229,11 @@ def apply_cvm_residualization(df: pd.DataFrame,
 
     for ft in features:
         df[ft] = (df[ft] - df_params.loc[df_params['Features'] == ft, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == ft, 'Scaler_Var'].values)
-
+    
     df = df.drop(columns = df.columns[df.columns.str.startswith('Pred')])
 
     features = features + [sex_col,]
-
+    
     return df, features
 
 
