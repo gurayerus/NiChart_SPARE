@@ -137,7 +137,7 @@ def preprocess_regression_data(
             for fs in feature_scaler.keys():
                 X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
     
-    return X, y, feature_encoder, feature_scaler #, target_scaler
+    return X, y, feature_encoder, feature_scaler
 
 
 # Prepare data for classifier training and testing
@@ -191,35 +191,42 @@ def preprocess_classification_data(
             for fs in feature_scaler.keys():
                 X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
 
-    return X, y, feature_encoder, feature_scaler #, target_encoder
+    return X, y, feature_encoder, feature_scaler
 
 import warnings
 
 def apply_cvm_residualization(df: pd.DataFrame, 
                               age_col='Age', 
                               sex_col='Sex', 
-                              dlicv_col='702'):
+                              dlicv_col='DL_MUSE_Volume_702'):
+    
+    df = df.rename(columns={dlicv_col:'DLICV'})
+
+    all_columns = df.columns.tolist()
+
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl.csv'))
-    df_params = df_params.rename(columns={'DLICV':dlicv_col})
-        
-    rois = df_params.loc[df_params['Features'].str.contains('H_DL_MUSE_Volume|DL_WMLS_Volume'),'Features']
-    
+    df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl2.csv'))
+
+    # df_params = pd.read_csv("/home/kylebaik/Packages/NiChart_SPARE/NiChart_SPARE/reference/covparams_scaler_sparecvms_dl2.csv")
+    # df_params = df_params.rename(columns={'DLICV':dlicv_col})
+
     df['Age_Original'] = df[age_col]#.copy(deep=True)
     meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
 
     df['Mean_centered_age'] = df['Age_Original']-meanage
-    df['DLICV_Original'] = df[dlicv_col].copy(deep=True)
+    df['DLICV_Original'] = df['DLICV'].copy(deep=True)
 
     # Map Sex column
     if 'Sex_M' not in df.columns:
         df['Sex_M'] = df[sex_col].copy(deep=True)
-        if 0 not in df[sex_col].unique() and 'M' in df[sex_col].unique():
+        if 0 not in df[sex_col].unique() and 'M' in df[sex_col].unique() and 'F' in df[sex_col].unique():
             df['Sex_M'] = df[sex_col].map({'F':0,'M':1})
 
-    features = [age_col, dlicv_col] + [roi for roi in rois if roi in df.columns]
-    confounds = ['Sex_M', 'Mean_centered_age', dlicv_col]
+    rois = df_params.loc[df_params['Features'].str.contains('_Volume_'),'Features']
+
+    features = [age_col, 'DLICV'] + [roi for roi in rois if roi in df.columns]
+    confounds = ['Sex_M', 'Mean_centered_age', 'DLICV']
     
     for roi in rois:
         if roi in df.columns:
@@ -230,10 +237,14 @@ def apply_cvm_residualization(df: pd.DataFrame,
     for ft in features:
         df[ft] = (df[ft] - df_params.loc[df_params['Features'] == ft, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == ft, 'Scaler_Var'].values)
     
-    df = df.drop(columns = df.columns[df.columns.str.startswith('Pred')])
-
-    features = features + [sex_col,]
     
-    return df, features
+
+    df = df[all_columns]
+    
+    #features = features + [sex_col,]
+
+    df = df.rename(columns={'DLICV': dlicv_col})
+    
+    return df #, features
 
 

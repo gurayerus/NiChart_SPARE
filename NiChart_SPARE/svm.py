@@ -204,15 +204,15 @@ def train_svm_model(input_file,
         print(f"Validating input...")
         validate_dataframe(df, target_column)
         print(f"Success.")
-        
         # Preprocess the input df, split into X, y
         print(f"Preprocessing the input with Age, Sex, ICV residualization...{df.shape}")
         from .data_prep import apply_cvm_residualization
-        df, features = apply_cvm_residualization(df, 
-                                                 age_col=age_col,
-                                                 sex_col=sex_col,
-                                                 dlicv_col=icv_col)
-        df = df[features + [target_column]]
+        df = apply_cvm_residualization(df, 
+                                       age_col=age_col,
+                                       sex_col=sex_col,
+                                       dlicv_col=icv_col)
+        df = df.drop([age_col,sex_col,icv_col],axis=1)
+        print(f"Keeping just the residualized features: {df.drop([target_column],axis=1).columns}")
         X, y, feature_encoder, feature_scaler = preprocess_classification_data(
             df, 
             target_column = target_column, 
@@ -327,20 +327,21 @@ def infer_svm_model(input_file,
 
     # subset for only needed columns
     if meta_data['training_data_description']['target_column'] in df.columns.tolist():
-        print(f"DEBUG: target_column is in df columns.")
-        print(f"DEBUG: key_variable: {key_variable}")
-        print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
-        print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
-        df = df[[key_variable, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
+        # print(f"DEBUG: target_column is in df columns.")
+        # print(f"DEBUG: key_variable: {key_variable}")
+        # print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
+        # print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
+        df = df[[key_variable, age_col, 'Sex', icv_col, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
     else:
-        print(f"DEBUG: target column is not in df columns.")
-        print(f"DEBUG: key_variable: {key_variable}")
-        print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
-        print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
-        df = df[[key_variable] + meta_data['training_data_description']['feature_names']]
+        # print(f"DEBUG: target column is not in df columns.")
+        # print(f"DEBUG: key_variable: {key_variable}")
+        # print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
+        # print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
+        df = df[[key_variable, age_col, 'Sex', icv_col] + meta_data['training_data_description']['feature_names']]
 
 
     print(f"Preprocessing the input...{df.shape}")
+    print(df.columns.tolist())
 
     # Perform ICV correction across all ROIs if asked
 
@@ -369,13 +370,17 @@ def infer_svm_model(input_file,
             for_training=False
             )
         print(f"Input preprocessing completed. Feature shape: {X.shape}")
+    
+    # CVMs
     elif spare_type in ['CVM','HT','T2B','SM','BMI']:
+        print("Processing CVM")
         from .data_prep import apply_cvm_residualization
-        df, features = apply_cvm_residualization(df, 
-                                                 age_col=age_col,
-                                                 sex_col=sex_col,
-                                                 dlicv_col=icv_col)
-        df = df[features]
+        df = apply_cvm_residualization(df, 
+                                       age_col=age_col,
+                                       sex_col='Sex',
+                                       dlicv_col=icv_col)
+        df = df.drop([age_col,'Sex',icv_col],axis=1)
+        #print(f"Keeping just the residualized features: {df.drop([target_column],axis=1).columns}")
         X, y, _, _ = preprocess_classification_data( 
             df = df.drop([key_variable],axis=1),
             target_column = meta_data['training_data_description']['target_column'],
