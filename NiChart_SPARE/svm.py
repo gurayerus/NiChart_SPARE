@@ -331,13 +331,16 @@ def infer_svm_model(input_file,
         # print(f"DEBUG: key_variable: {key_variable}")
         # print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
         # print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
-        df = df[[key_variable, age_col, 'Sex', icv_col, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
+        # df = df[[key_variable, age_col, 'Sex', icv_col, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
+        df = df[[key_variable, meta_data['training_data_description']['target_column']] + meta_data['training_data_description']['feature_names']]
+
     else:
         # print(f"DEBUG: target column is not in df columns.")
         # print(f"DEBUG: key_variable: {key_variable}")
         # print(f"DEBUG: meta_data['training_data_description']['feature_names']: {meta_data['training_data_description']['feature_names']}")
         # print(f"DEBUG: meta_data['training_data_description']['target_column']: {meta_data['training_data_description']['target_column']}")
-        df = df[[key_variable, age_col, 'Sex', icv_col] + meta_data['training_data_description']['feature_names']]
+        # df = df[[key_variable, age_col, 'Sex', icv_col] + meta_data['training_data_description']['feature_names']]
+        df = df[[key_variable] + meta_data['training_data_description']['feature_names']]
 
 
     print(f"Preprocessing the input...{df.shape}")
