@@ -87,7 +87,8 @@ def main():
     # Misc arguments
     parser.add_argument('-v', '--verbose', type=int, default=0,
                        help='Control the amount of output messages (0, 1, 2, 3)')
-    
+    parser.add_argument('--append-spare-tag', type=str, default='',
+                       help='Post-process SPARE output CSV by applying the provided tag, e.g. SPARE_score becomes SPARE_{tag}. Mostly useful for pipelining. (Inference only).')
     args = parser.parse_args()
     
     # Convert string arguments to boolean
@@ -152,7 +153,8 @@ def main():
                     model_path=args.model,
                     spare_type=args.type,
                     output_file=args.output,
-                    key_variable=args.key_variable                    
+                    key_variable=args.key_variable,
+                    append_spare_tag=args.append_spare_tag,
                 )
             elif args.model_type == 'MLP':
                 print("MLP is coming soon!")

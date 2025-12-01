@@ -299,7 +299,8 @@ def infer_svm_model(input_file,
                     icv_col="DL_MUSE_Volume_702",
                     age_col='Age',
                     sex_col='Sex_M',
-                    drop_columns=None):
+                    drop_columns=None,
+                    append_spare_tag=None):
     """Make predictions using trained model"""
     
     # Load model
@@ -412,6 +413,27 @@ def infer_svm_model(input_file,
 
     if meta_data['training_data_description']['target_column'] in df.columns:
         output_df['GT_'+spare_type] = y
+
+    if append_spare_tag is not None:
+        mapping = {}
+
+        # SPARE_CL  -> SPARE_<tag>
+        if "SPARE_CL" in df.columns:
+            mapping["SPARE_CL"] = f"SPARE_{tag}"
+
+        # SPARE_RG  -> SPARE_<tag>
+        if "SPARE_RG" in df.columns:
+            mapping["SPARE_RG"] = f"SPARE_{tag}"
+
+        # SPARE_CL_decision_function -> SPARE_<tag>_decision_function
+        if "SPARE_CL_decision_function" in df.columns:
+            mapping["SPARE_CL_decision_function"] = f"SPARE_{tag}_decision_function"
+
+        # GT_RG -> <tag>_GT_RG
+        if "GT_RG" in df.columns:
+            mapping["GT_RG"] = f"{tag}_GT_RG"
+
+    output_df = output_df.rename(columns=mapping)
     
     # Save predictions
     output_df.to_csv(output_file, index=False)

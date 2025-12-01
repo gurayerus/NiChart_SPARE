@@ -47,6 +47,12 @@ if 'Sex' not in df_original.columns:
     sys.exit(1)
 
 df_original['Sex_M'] = df_original['Sex'].apply(lambda x: 1 if x=='M' else 0)
+
+if 'DL_MUSE_Volume_702' in df_original.columns:
+    df_original['702'] = df_original['DL_MUSE_Volume_702']
+if 'H_DL_MUSE_Volume_702' in df_original.columns:
+    df_original['702'] = df_original['H_DL_MUSE_Volume_702']
+
 with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp_file:
     temp_csv_path = tmp_file.name
     df_original.to_csv(temp_csv_path, index=False)
