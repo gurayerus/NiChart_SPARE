@@ -322,7 +322,7 @@ def infer_svm_model(input_file,
     # Check all columns exist in the input file
     for nf in meta_data['training_data_description']['feature_names']:
         if nf not in df.columns:
-            raise("Missing columns:"+nf)
+            raise Exception("Missing columns:"+nf)
         else:
             print(f"Checked:\t{nf}")
 
