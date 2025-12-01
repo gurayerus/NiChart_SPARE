@@ -154,13 +154,15 @@ def preprocess_classification_data(
     feature_scaler: StandardScaler = None, # for inference
 ):
     X, y = (None, None)
-
+    print("In preprocessing of classification data.")
     if for_training == True:
         """Preprocess data for training: handle missing values and encode categorical featurs & targets."""
         feature_encoder, feature_scaler = (None, None)
+        print("Dropping rows with target column NaNs")
         df = df.dropna(subset=[target_column]) # Remove rows with missing target values
         
         # Separate features and target
+        print("Separating feature and target columns.")
         X = df.drop(columns=[target_column])
         y = df[target_column]
         
@@ -176,18 +178,22 @@ def preprocess_classification_data(
     else:
         """Preprocess data for inference: handle missing values and encode categorical features."""
         # Check if ground truth is provided in the df, if so, drop it.
+        print(f"Dropping target column {target_column} if present.")
         if target_column in df.columns:
             X = df.drop([target_column],axis=1)
             y = df[target_column]
         else:
+            print("Target column not found in dataframe.")
             X = df
             y = None
         
         if feature_encoder != None:
+            print("Running feature encoding.")
             for ec in feature_encoder.keys():
                 X[ec] = feature_encoder[ec].fit_transform(X[ec])
         
         if feature_scaler != None:
+            print("Running feature scaling.")
             for fs in feature_scaler.keys():
                 X[fs] = feature_scaler[fs].transform(X[fs].to_numpy().reshape(-1,1))
 
