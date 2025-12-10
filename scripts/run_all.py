@@ -134,12 +134,20 @@ if 'Sex' not in df_original.columns:
     print("Error: Required 'Sex' column not found in the CSV file.")
     sys.exit(1)
 
+print("Original dataframe passed to SPARE runall has columns: {df_original.columns}")
+
 df_original['Sex_M'] = df_original['Sex'].apply(lambda x: 1 if x=='M' else 0)
 
+dlicv_found = False
 if 'DL_MUSE_Volume_702' in df_original.columns:
+    dlicv_found = True
     df_original['702'] = df_original['DL_MUSE_Volume_702']
 if 'H_DL_MUSE_Volume_702' in df_original.columns:
+    dlicv_found = True
     df_original['702'] = df_original['H_DL_MUSE_Volume_702']
+
+if not dlicv_found:
+    print("Original dataframe passed to SPARE runall doesn't have DLICV columns.")
 
 with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp_file:
     temp_csv_path = tmp_file.name
