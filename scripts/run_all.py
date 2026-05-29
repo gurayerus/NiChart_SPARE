@@ -136,17 +136,19 @@ if 'Sex' not in df_original.columns:
 
 df_original['Sex_M'] = df_original['Sex'].apply(lambda x: 1 if x=='M' else 0)
 
-if 'DL_MUSE_Volume_702' in df_original.columns:
-    df_original['702'] = df_original['DL_MUSE_Volume_702']
-if 'H_DL_MUSE_Volume_702' in df_original.columns:
-    df_original['702'] = df_original['H_DL_MUSE_Volume_702']
+#if 'DL_MUSE_Volume_702' in df_original.columns:
+#    df_original['702'] = df_original['DL_MUSE_Volume_702']
+#if 'H_DL_MUSE_Volume_702' in df_original.columns:
+#    df_original['702'] = df_original['H_DL_MUSE_Volume_702']
 
 with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp_file:
     temp_csv_path = tmp_file.name
     df_original.to_csv(temp_csv_path, index=False)
 
-non_cvm_models = list_filtered_files('/spare_score/Models/final_models', ['HYPERTENSION', 'DIABETES', 'OBESITY', 'SMOKING', 'HYPERLIPIDEMIA'])
-cvm_models = list_filtered_files('/spare_score/Models/withDLWMLS', [])
+## Here's where we filter out models
+
+non_cvm_models = list_filtered_files('/spare_score/Models/final_models', forbidden_substrings=['HYPERTENSION', 'DIABETES', 'OBESITY', 'SMOKING', 'HYPERLIPIDEMIA', 'MDD', 'PSY'])
+cvm_models = list_filtered_files('/spare_score/Models/withDLWMLS', forbidden_substrings=[])
 
 model_location_dict = {'cvm': cvm_models, 'misc': non_cvm_models}
 
@@ -155,15 +157,16 @@ all_successful_tmp_csvs = []
 successful_tags = []
 exit_codes = []
 encountered_spare_tags = []
+print("See https://huggingface.co/nichart/SPARE-ALL/tree/main for all available model files...")
 for model in model_location_dict[args.category]:
-    print(f"Model {model}")
+    print(f"Scanning model {model}")
     if 'harmonized' in model.lower():
         if not args.harmonize:
-            print("Skipping...")
+            print("Skipping (this model is for harmonized data)...")
             continue
     else:
         if args.harmonize:
-            print("Skipping...")
+            print("Skipping (this model is for unharmonized data)...")
             continue
     model_joblib = joblib.load(model)
     inference_mode = model_joblib['meta_data']['spare_type']
@@ -182,6 +185,8 @@ for model in model_location_dict[args.category]:
         command_parts = ['NiChart_SPARE', '-kv', 'MRID', '-i', temp_csv_path, '-o', temp_out_path, '-t', inference_mode, '-m', model] + unknown_args
         command = ' '.join(f"{part}" if ' ' in part else part for part in command_parts)
         
+        print(f"Running inference using SPARE model from file {model}")
+
         exit_code = os.system(command)
         exit_codes.append(exit_code)
         if os.WEXITSTATUS(exit_code) > 0:
