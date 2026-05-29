@@ -67,7 +67,8 @@ def merge_csvs_on_mrid(csv_paths):
     Returns a single merged dataframe.
     """
     if not csv_paths:
-        raise ValueError("No CSV paths provided.")
+        print("No CSV paths were passed to MRID-based merge. Did SPARE produce any output?")
+        return pd.DataFrame()
 
     # Load the first one as the base
     merged = pd.read_csv(csv_paths[0])
@@ -165,6 +166,8 @@ successful_tags = []
 exit_codes = []
 encountered_spare_tags = []
 print("See https://huggingface.co/nichart/SPARE-ALL/tree/main for all available model files...")
+num_models_attempted = 0
+num_models_succeeded = 0
 for model in model_location_dict[args.category]:
     print(f"Scanning model {model}")
     if 'harmonized' in model.lower():
@@ -185,6 +188,7 @@ for model in model_location_dict[args.category]:
         encountered_spare_tags.append(spare_tag)
 
     print(f"Spare tag {spare_tag}, inference mode {inference_mode}")
+    num_models_attempted += 1
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp_out:
         temp_out_path = tmp_out.name
         all_tmp_csvs.append(temp_out_path)
@@ -201,12 +205,18 @@ for model in model_location_dict[args.category]:
         else:
             successful_tags.append(spare_tag)
             all_successful_tmp_csvs.append(temp_out_path)
+            num_models_succeeded += 1
+
+if num_models_attempted == 0:
+    print("No relevant models were found for this combination of requested SPARE scores and harmonization status. This is not necessarily an error, please see documentation.")
+    sys.exit(0)
 
 dfs = []
 for index, csv in  enumerate(all_successful_tmp_csvs):
     df = pd.read_csv(csv)
     df = rename_spare_columns(df, successful_tags[index])
     dfs.append(df)
+
 
 df_merged = merge_dfs_on_mrid(dfs)
 df_merged.to_csv(args.output)
