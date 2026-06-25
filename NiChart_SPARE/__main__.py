@@ -1,174 +1,182 @@
 #!/usr/bin/env python3
 """
-NiChart_SPARE - Main entry point for SPARE scores calculation
+NiChart_SPARE CLI
 
-This script provides command-line interface for training and inference of SPARE models.
-Supported SPARE types: 
-    - BA (Brain Age)
-    - AD (Alzheimer's)
-    - CVMs: HT (Hypertension), HL (Hyperlipidemia), T2B (Diabetes), SM (Smoking), OB (Obesity)
+Three-stage workflow:
+  prep   — task-specific preprocessing  → standardized CSV [MRID, target, features]
+  train  — SVM training on prepped CSV  → model .joblib
+  test   — model inference on prepped CSV → predictions CSV
 """
-import os
 import argparse
+import os
 import sys
-from .svm import (
-	train_svm_model, 
-	infer_svm_model
-)
+
 from . import __version__
 
-# Entry point & CLI Args
+
+def _add_common_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument('-kv', '--key_variable', default='MRID',
+                   help='Column that uniquely identifies each sample (default: MRID)')
+    p.add_argument('-v', '--verbose', type=int, default=1,
+                   help='Verbosity level (0–3)')
+
+
+def _build_prep_parser(sub):
+    p = sub.add_parser('prep', help='Prepare raw data for training or inference')
+    p.add_argument('-i', '--input',   required=True,  help='Input CSV path')
+    p.add_argument('-o', '--output',  required=True,  help='Output prepared CSV path')
+    p.add_argument('-t', '--type',    required=True,
+                   help='SPARE type: CL, RG, AD, BA, CVM, HT, T2B, SM, BMI')
+    p.add_argument('-tc', '--target_column', default=None,
+                   help='Target column name (omit for inference inputs)')
+    p.add_argument('-ic', '--ignore_columns', default='',
+                   help='Comma-separated columns to drop (e.g. Study,SITE,Sex)')
+    p.add_argument('-icv', '--icv_correction', default='False',
+                   help='Divide MUSE ROI volumes by ICV (True/False)')
+    p.add_argument('-icvc', '--icv_column', default='DL_MUSE_Volume_702',
+                   help='ICV column name')
+    p.add_argument('--age_col', default='Age',   help='Age column (CVM only)')
+    p.add_argument('--sex_col', default='Sex',   help='Sex column (CVM only)')
+    _add_common_args(p)
+    return p
+
+
+def _build_train_parser(sub):
+    p = sub.add_parser('train', help='Train an SVM model on prepared data')
+    p.add_argument('-i',  '--input',        required=True, help='Prepared CSV path')
+    p.add_argument('-mo', '--model_output', required=True, help='Output model path (.joblib)')
+    p.add_argument('-t',  '--type',         required=True,
+                   help='SPARE type: CL, RG, AD, BA, CVM, HT, T2B, SM, BMI')
+    p.add_argument('-sk', '--svm_kernel',   default='linear',
+                   help='SVM kernel: linear_fast, linear, rbf, poly, sigmoid')
+    p.add_argument('-ht', '--hyperparameter_tuning', default='True',
+                   help='Run GridSearchCV (True/False)')
+    p.add_argument('-tw', '--train_whole',  default='True',
+                   help='Train final model on the full dataset (True/False)')
+    p.add_argument('-cf', '--cv_fold',      type=int, default=5,
+                   help='Cross-validation folds (0 to skip CV, default: 5)')
+    p.add_argument('-cb', '--class_balancing', default='True',
+                   help='Enable class_weight="balanced" (True/False, classification only)')
+    p.add_argument('-bc', '--bias_correction', default='0',
+                   help='Bias correction: 0=none, 1=Beheshti et al., 2=Cole et al. (regression only)')
+    _add_common_args(p)
+    return p
+
+
+def _build_test_parser(sub):
+    p = sub.add_parser('test', help='Run inference with a trained model on prepared data')
+    p.add_argument('-i', '--input',  required=True, help='Prepared CSV path')
+    p.add_argument('-m', '--model',  required=True, help='Model file path (.joblib)')
+    p.add_argument('-o', '--output', required=True, help='Output predictions CSV path')
+    p.add_argument('--append_spare_tag', default='',
+                   help='Rename SPARE_<type> → SPARE_<tag> in output')
+    _add_common_args(p)
+    return p
+
+
 def main():
-    """Main entry point for NiChart_SPARE"""
     parser = argparse.ArgumentParser(
-        description="NiChart_SPARE - SPARE scores calculation from Brain ROI Volumes",
+        prog='NiChart_SPARE',
+        description=f'NiChart_SPARE v{__version__} — SPARE scores from brain ROI volumes',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-            Examples:
-            # Train AD model with hyperparameter tuning
-            NiChart_SPARE -a trainer -t AD -i data.csv -mo model.pkl -v True
-            
-            # Train final model after tuning
-            NiChart_SPARE -a trainer -t AD -i data.csv -mo model.pkl -v True -f True
-            
-            # Make predictions
-            NiChart_SPARE -a inference -t AD -i test.csv -m model.pkl -o predictions.csv
-        """
+Examples:
+  # 1. Prepare training data (CVM residualization applied automatically)
+  NiChart_SPARE prep -t CVM -i raw.csv -o prepped_train.csv -tc Disease -ic Study,SITE
+
+  # 2. Train a linear SVM classifier
+  NiChart_SPARE train -t CVM -i prepped_train.csv -mo model.joblib -sk linear -ht True -cf 5
+
+  # 3. Prepare test data (same prep type, no target column required)
+  NiChart_SPARE prep -t CVM -i raw_test.csv -o prepped_test.csv
+
+  # 4. Run inference
+  NiChart_SPARE test -i prepped_test.csv -m model.joblib -o predictions.csv
+""",
     )
-    
-    # Required arguments
-    parser.add_argument('-a', '--action', required=True, choices=['trainer', 'inference', 'analysis'],
-                       help='Action to perform: trainer, inference, or analysis')
-    parser.add_argument('-t', '--type', required=True, 
-                       help="SPARE type: CL (Classfication), RG (Regression), BA (Brain Age), AD (Alzheimer\'s),\n CVM (Cardiovascular and metabolic (Govindarajan et al.))")
-    parser.add_argument('-i', '--input', required=True,
-                       help='Input CSV file path')
-    # Model specific arguments
-    parser.add_argument('-mt', '--model_type', type=str, default='SVM',
-                        help='Type of ML model. Currently supported: SVM')
-    ## SVM specific
-    parser.add_argument('-sk', '--svm_kernel', type=str, default='linear',
-                       help='SVM kernel type (linear, poly, rbf, sigmoid)')
-    # parser.add_argument('-bc', '--bias_correction', type=str, default='False',
-    #                    help='Perform bias correction for linearSVM (linear_fast) models.')
-    parser.add_argument('-bc', '--bias_correction', required=False, type=str, default='1',
-                       help='Perform bias correction for regression task. 0 for disabling. 1 for Beheshti et al. 2 for Cole et al.')
-    # ICV correction
-    parser.add_argument('-icv','--icv_correction', type=str, default='False',
-                        help='Perform ICV correction (all ROI features divided by ICV). (True/False)')
-    parser.add_argument('-icvc','--icv_column', type=str, default='DL_MUSE_Volume_702',
-                        help='Name of the ICV column in the input csv.')
-    ## MLP specific
-    ### TBA
-    # Train/Test specific arguments
-    parser.add_argument('-ht', '--hyperparameter_tuning', type=str, default='True',
-                       help='Perform hyperparameter tuning job. Takes a while. (True/False)')
-    parser.add_argument('-tw', '--train_whole', type=str, default='True',
-                       help='Train final model on entire dataset (True/False)')
-    parser.add_argument('-cf', '--cv_fold', type=int, default=5,
-                       help='Number of folds for CV (Default: 5)')
-    parser.add_argument('-mo', '--model_output', 
-                       help='Output model file path (for training)')
-    # Inference specific arguments
-    parser.add_argument('-m', '--model', 
-                       help='Input model file path (for inference)')
-    parser.add_argument('-o', '--output', 
-                       help='Output CSV file path (for inference)')
-    # Analysis specific arguments
-    parser.add_argument('-di', '--disease', type=str, default='AD',
-                         help='Name of column indicating unique disease')
-    # data preprocessing arguments
-    parser.add_argument('-kv', '--key_variable',
-                       help='Name of column indicating unique data points in the input CSV', default="MRID")
-    parser.add_argument('-tc', '--target_column', default='target',
-                       help='Name of target column in CSV')
-    parser.add_argument('-ic', '--ignore_column', default='',
-                       help='Comma-separated list of column names to drop from input CSV')
-    parser.add_argument('-cb', '--class_balancing', type=str, default='True',
-                        help='Enable SVM Class Balancing for Training')
-    # Misc arguments
-    parser.add_argument('-v', '--verbose', type=int, default=0,
-                       help='Control the amount of output messages (0, 1, 2, 3)')
-    parser.add_argument('--append-spare-tag', type=str, default='',
-                       help='Post-process SPARE output CSV by applying the provided tag, e.g. SPARE_score becomes SPARE_{tag}. Mostly useful for pipelining. (Inference only).')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
+
+    sub = parser.add_subparsers(dest='action', metavar='ACTION')
+    sub.required = True
+    _build_prep_parser(sub)
+    _build_train_parser(sub)
+    _build_test_parser(sub)
+
     args = parser.parse_args()
-    
-    # Convert string arguments to boolean
-    tune_hyperparameters = args.hyperparameter_tuning.lower() == 'true'
-    train_whole_set = args.train_whole.lower() == 'true'
-    class_balancing = args.class_balancing.lower() == 'true'
-    icv_correction = args.icv_correction.lower() == 'true'
 
-    bias_correction = int(args.bias_correction)
-    cross_validate = int(args.cv_fold) != 0
-    
-    # Parse columns to drop
-    if ',' in args.ignore_column:
-        ignore_columns = args.ignore_column.split(',')
-    elif args.ignore_column==None:
-        ignore_columns = None
-    else:
-        ignore_columns = [args.ignore_column]
-    
     try:
-        if args.action == 'trainer':
-            if not args.model_output:
-                raise ValueError("Model output path (-mo) is required for training")
-            print(f"Training {args.model_type} model")
-
-            if args.model_type == 'SVM':
-                train_svm_model(
-                    input_file=args.input,
-                    model_path=args.model_output,
-                    spare_type=args.type,
-                    target_column=args.target_column,
-                    kernel=args.svm_kernel,
-                    tune_hyperparameters=tune_hyperparameters,
-                    cv_fold=args.cv_fold,
-                    class_balancing=class_balancing,
-                    cross_validate=cross_validate,
-                    train_whole_set=train_whole_set,
-                    bias_correction=bias_correction,
-                    icv_correction = icv_correction,
-                    drop_columns=ignore_columns + [args.key_variable],
-                    verbose=args.verbose
-                )
-            elif args.model_type == 'MLP':
-                print("MLP is coming soon!")
-            else:
-                print(f"{args.model_type} is an unsupported model type.")
-            
-        elif args.action == 'inference':
-            # Check Arguments
-            if not args.model:
-                raise ValueError("Model path (-m) is required for inference")
-            if not args.output:
-                raise ValueError("Output path (-o) is required for inference")
-            # Create output directory if it doesn't exist
-            if not os.path.exists(os.path.dirname(args.output)):
-                print(f"Output directory does not exist. Creating f{os.path.dirname(args.output)}...")
-                os.mkdir(os.path.dirname(args.output))
-            # Create metadata file
-            metadata_txt_path = os.path.join(os.path.dirname(args.output), "output_metadata.txt")
-            with open(metadata_txt_path, "w") as f:
-                f.write(f"Output in this folder generated by NiChart_SPARE v{__version__}.\n")
-            # Run inference
-            if args.model_type == 'SVM':
-                infer_svm_model(
-                    input_file=args.input,
-                    model_path=args.model,
-                    spare_type=args.type,
-                    output_file=args.output,
-                    key_variable=args.key_variable,
-                    append_spare_tag=args.append_spare_tag,
-                )
-            elif args.model_type == 'MLP':
-                print("MLP is coming soon!")
-            else:
-                print(f"{args.model_type} is an unsupported model type.")
-            
+        if args.action == 'prep':
+            _run_prep(args)
+        elif args.action == 'train':
+            _run_train(args)
+        elif args.action == 'test':
+            _run_test(args)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
-if __name__ == "__main__":
+
+# ---------------------------------------------------------------------------
+# Action handlers
+# ---------------------------------------------------------------------------
+
+def _run_prep(args):
+    from .prep_data import prep_data
+
+    ignore = [c.strip() for c in args.ignore_columns.split(',') if c.strip()]
+    icv_correction = args.icv_correction.lower() == 'true'
+
+    prep_data(
+        input_file=args.input,
+        spare_type=args.type,
+        key_variable=args.key_variable,
+        target_column=args.target_column,
+        ignore_columns=ignore or None,
+        output_file=args.output,
+        icv_correction=icv_correction,
+        icv_column=args.icv_column,
+        age_col=args.age_col,
+        sex_col=args.sex_col,
+    )
+
+
+def _run_train(args):
+    from .train import train_model
+
+    tune   = args.hyperparameter_tuning.lower() == 'true'
+    whole  = args.train_whole.lower() == 'true'
+    bal    = args.class_balancing.lower() == 'true'
+    cv     = args.cv_fold != 0
+    bc     = int(args.bias_correction)
+
+    train_model(
+        input_file=args.input,
+        model_path=args.model_output,
+        spare_type=args.type,
+        kernel=args.svm_kernel,
+        tune_hyperparameters=tune,
+        cv_fold=args.cv_fold,
+        class_balancing=bal,
+        cross_validate=cv,
+        train_whole_set=whole,
+        bias_correction=bc,
+        verbose=args.verbose,
+    )
+
+
+def _run_test(args):
+    from .inference import infer_model
+
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+
+    infer_model(
+        input_file=args.input,
+        model_path=args.model,
+        output_file=args.output,
+        key_variable=args.key_variable,
+        append_spare_tag=args.append_spare_tag,
+    )
+
+
+if __name__ == '__main__':
     main()
