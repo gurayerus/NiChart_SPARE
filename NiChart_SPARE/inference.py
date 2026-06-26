@@ -15,7 +15,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from .data_prep import (
+from .preprocessing import (
     load_csv_data,
     preprocess_classification_data,
     preprocess_regression_data,

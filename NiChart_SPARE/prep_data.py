@@ -14,7 +14,7 @@ What this module handles (no encoding or scaling — those live in train/inferen
 """
 
 import pandas as pd
-from .data_prep import (
+from .preprocessing import (
     load_csv_data,
     validate_dataframe,
     correct_icv,

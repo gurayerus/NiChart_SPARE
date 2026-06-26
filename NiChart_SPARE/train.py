@@ -16,7 +16,7 @@ import joblib
 import pandas as pd
 from importlib.metadata import version
 
-from .data_prep import (
+from .preprocessing import (
     load_csv_data,
     validate_dataframe,
     preprocess_classification_data,

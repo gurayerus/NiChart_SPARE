@@ -62,7 +62,7 @@ def correct_icv(df: pd.DataFrame, icv_col: str = "DL_MUSE_Volume_702", roi_col_k
     roi_columns = [col for col in df.columns if roi_col_keyword in col and col != roi_col_keyword]
     if icv_col in df.columns and len(roi_columns) > 0:
         non_roi_columns = [col for col in df.columns if col not in roi_columns and col != roi_col_keyword]
-        df_roi_icv_corrected = df[roi_columns] / df[icv_col]
+        df_roi_icv_corrected = df[roi_columns].div(df[icv_col], axis=0)
         if non_roi_columns != []:
             df_roi_icv_corrected = pd.concat([df[non_roi_columns],df_roi_icv_corrected],axis=1)
         return df_roi_icv_corrected[[c for c in df.columns if c != icv_col]]
@@ -212,10 +212,7 @@ def apply_cvm_residualization(df: pd.DataFrame,
 
     warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl2.csv'))
-
-    # df_params = pd.read_csv("/home/kylebaik/Packages/NiChart_SPARE/NiChart_SPARE/reference/covparams_scaler_sparecvms_dl2.csv")
-    # df_params = df_params.rename(columns={'DLICV':dlicv_col})
+    df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl.csv'))
 
     df['Age_Original'] = df[age_col]#.copy(deep=True)
     meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
@@ -241,7 +238,9 @@ def apply_cvm_residualization(df: pd.DataFrame,
             df[roi] =  df['Orig_' + roi] - df['Pred_' + roi] 
 
     for ft in features:
-        df[ft] = (df[ft] - df_params.loc[df_params['Features'] == ft, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == ft, 'Scaler_Var'].values)
+        # 'DLICV' is the renamed ICV column; the reference CSV still uses the original column name
+        lookup = dlicv_col if ft == 'DLICV' else ft
+        df[ft] = (df[ft] - df_params.loc[df_params['Features'] == lookup, 'Scaler_Mean'].values) / np.sqrt(df_params.loc[df_params['Features'] == lookup, 'Scaler_Var'].values)
     
     
 

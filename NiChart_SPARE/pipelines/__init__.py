@@ -1,24 +1,7 @@
 """
-NiChart_SPARE Pipelines
+NiChart_SPARE pipeline modules.
 
-This package contains the pipeline modules for different SPARE score calculations.
+  spare_svm_classification — train_svc_model() for CL/AD/CVM types
+  spare_svm_regression     — train_svr_model() for RG/BA types
 """
-
-# Import pipeline modules
-try:
-    # from . import spare_ad
-    # from . import spare_ba
-    # from . import spare_ht
-    from . import spare_svm_classification
-    from . import spare_svm_regression
-except ImportError:
-    # Pipeline modules might not be implemented yet
-    pass
-
-__all__ = [
-    # "spare_ad",
-    # "spare_ba", 
-    # "spare_ht",
-    "spare_svm_classification",
-    "spare_svm_regression"
-] 
+from . import spare_svm_classification, spare_svm_regression

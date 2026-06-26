@@ -20,7 +20,7 @@ from ..util import (
     get_hyperparameter_tuning
 )
 
-from ..svm import (
+from ..util import (
     get_svm_hyperparameter_grids,
 )
 

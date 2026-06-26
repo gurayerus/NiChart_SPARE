@@ -4,5 +4,6 @@ include setup.py
 include setup.cfg
 include MANIFEST.in
 recursive-include NiChart_SPARE *.py
+recursive-include NiChart_SPARE *.csv
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co] 
