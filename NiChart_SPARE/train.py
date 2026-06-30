@@ -44,6 +44,8 @@ def train_model(
     verbose: int = 1,
     model_tag: str = '',
     model_version: str = '',
+    prep_config: dict = None,
+    output_config: dict = None,
 ) -> dict:
     """
     Train an SVM model on a prepared input CSV and save it to disk.
@@ -152,6 +154,8 @@ def train_model(
             'preprocessor':         preprocessor,
             'hyperparameter_tuning': ht,
             'cross_validation':     cv,
+            'prep_config':          prep_config,
+            'output_config':        output_config,
         },
         model_path,
     )

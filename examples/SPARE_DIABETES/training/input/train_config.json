@@ -1,15 +1,15 @@
 {
   "description": {
-    "spare_type": "AD",
-    "model_tag": "SPARE_AD",
+    "spare_type": "CL",
+    "model_tag": "SPARE_DIABETES",
     "model_version": "1.0",
-    "run_tag": "SPARE_AD_v1.0"
+    "run_tag": "SPARE_DIABETES_v1.0"
   },
 
   "input": {
     "in_dir": ".",
     "in_csv": "raw_data.csv",
-    "in_cols": ["MRID", "disease", "Age", "Sex", "DL_MUSE_Volume_*"],
+    "in_cols": ["MRID", "disease", "Age", "Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"],
     "key_col": "MRID",
     "target_col": "disease",
     "age_col": "Age",
@@ -27,9 +27,9 @@
   },
 
   "output": {
-    "out_dir": "../models",
-    "out_csv": "predictions.csv",
-    "out_cols": ["MRID", "SPARE_AD"],
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
+    "out_cols": ["MRID", "SPARE_CL"],
     "out_model_dir": "model"
   }
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Train a SPARE-AD model from the example data.
 #
-# Run this script from the repo root:
-#   bash examples/SPARE_AD/run_training.sh
+# Run from the repo root:
+#   bash examples/SPARE_AD/training/run_training.sh
 #
 # The trained model and experiment metadata are written to:
-#   examples/SPARE_AD/output/<run_tag>/   (run_tag is set in train_config.json)
+#   examples/SPARE_AD/training/output/<run_tag>/   (run_tag is set in train_config.json)
 
 set -euo pipefail
 

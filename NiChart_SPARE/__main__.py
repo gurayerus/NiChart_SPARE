@@ -2,10 +2,11 @@
 """
 NiChart_SPARE CLI
 
-Three-stage workflow:
-  prep   — task-specific preprocessing  → standardized CSV [MRID, target, features]
+Two-stage workflow:
   train  — SVM training driven by a JSON config → experiment directory with model + metadata
-  test   — model inference on prepped CSV → output directory with predictions.csv
+           (data prep is performed automatically and saved alongside the model)
+  test   — model inference on raw CSV → output directory with prepped.csv + predictions.csv
+           (prep is applied automatically using parameters stored inside the model)
 """
 import argparse
 import json
@@ -18,37 +19,10 @@ from datetime import datetime
 from . import __version__
 
 
-def _add_common_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument('-kv', '--key_variable', default='MRID',
-                   help='Column that uniquely identifies each sample (default: MRID)')
-    p.add_argument('-v', '--verbose', type=int, default=1,
-                   help='Verbosity level (0–3)')
-
-
-def _build_prep_parser(sub):
-    p = sub.add_parser('prep', help='Prepare raw data for training or inference')
-    p.add_argument('-i', '--input',   required=True,  help='Input CSV path')
-    p.add_argument('-o', '--output',  required=True,  help='Output prepared CSV path')
-    p.add_argument('-t', '--type',    required=True,
-                   help='SPARE type: CL, RG, AD, BA, CVM, HT, T2B, SM, BMI')
-    p.add_argument('-tc', '--target_column', default=None,
-                   help='Target column name (omit for inference inputs)')
-    p.add_argument('-ic', '--ignore_columns', default='',
-                   help='Comma-separated columns to drop (e.g. Study,SITE,Sex)')
-    p.add_argument('-icv', '--icv_correction', default='False',
-                   help='Divide MUSE ROI volumes by ICV (True/False)')
-    p.add_argument('-icvc', '--icv_column', default='DL_MUSE_Volume_702',
-                   help='ICV column name')
-    p.add_argument('--age_col', default='Age',   help='Age column (CVM only)')
-    p.add_argument('--sex_col', default='Sex',   help='Sex column (CVM only)')
-    _add_common_args(p)
-    return p
-
-
 def _build_train_parser(sub):
-    p = sub.add_parser('train', help='Train an SVM model from a YAML config file')
+    p = sub.add_parser('train', help='Train an SVM model from a JSON config file')
     p.add_argument('-c', '--config', required=True,
-                   help='Path to a YAML training config file')
+                   help='Path to a JSON training config file')
     p.add_argument('-n', '--notes', default='',
                    help='Free-text notes stored in the experiment meta.json')
     return p
@@ -81,24 +55,8 @@ def _build_test_parser(sub):
     p.add_argument('--version', default=None,
                    help='Model version to use with --task (default: task\'s default version)')
 
-    # Optional inline prep (if --prep-type is given, input is treated as raw)
-    p.add_argument('-pt', '--prep-type', default=None,
-                   help='Run prep on --input before inference. '
-                        'Same values as NiChart_SPARE prep -t (CL, RG, AD, BA, CVM, …)')
-    p.add_argument('-ic', '--ignore-columns', default='',
-                   help='Comma-separated columns to drop during prep (used with --prep-type)')
-    p.add_argument('-icv', '--icv-correction', default='False',
-                   help='Divide MUSE ROI volumes by ICV before prep (True/False)')
-    p.add_argument('-icvc', '--icv-column', default='DL_MUSE_Volume_702',
-                   help='ICV column name (used with --icv-correction)')
-    p.add_argument('--age-col', default='Age',
-                   help='Age column name for CVM residualization (used with --prep-type CVM)')
-    p.add_argument('--sex-col', default='Sex',
-                   help='Sex column name for CVM residualization (used with --prep-type CVM)')
-
     p.add_argument('--append_spare_tag', default='',
                    help='Rename SPARE_<type> → SPARE_<tag> in output column')
-    _add_common_args(p)
     return p
 
 
@@ -109,45 +67,36 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Train a model from a JSON config (prep runs automatically)
+  NiChart_SPARE train -c examples/SPARE_AD/input/train_config.json
+
+  # Inference with a registered task (downloads model, preps input automatically)
+  NiChart_SPARE test -t AD -i raw.csv -o ./results/
+
+  # Inference with a specific version
+  NiChart_SPARE test -t AD --version v3.0 -i raw.csv -o ./results/
+
+  # Inference with a local model file
+  NiChart_SPARE test -m model.joblib -i raw.csv -o ./results/
+
   # List available pre-trained tasks
   NiChart_SPARE test --list-tasks
 
-  # Quick inference using a registered task (downloads model automatically)
-  NiChart_SPARE test -t AD -i prepped.csv -o ./results/
-
-  # Specific version
-  NiChart_SPARE test -t AD --version v3.0-raw -i prepped.csv -o ./results/
-
-  # Explicit local model file
-  NiChart_SPARE test -m model.joblib -i prepped.csv -o ./results/
-
-  # Show download URL and manual-use instructions for a task
+  # Show info / download URL for a task
   NiChart_SPARE test -t AD --model-info
-
-  # Prepare training data (CVM residualization applied automatically)
-  NiChart_SPARE prep -t CVM -i raw.csv -o prepped.csv -tc Disease -ic Study,SITE
-
-  # Train from a YAML config file
-  NiChart_SPARE train -c configs/train_cvm.yaml
-
-  # Prepare test data (same type, no target column required)
-  NiChart_SPARE prep -t CVM -i raw_test.csv -o prepped_test.csv
 """,
     )
     parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
 
     sub = parser.add_subparsers(dest='action', metavar='ACTION')
     sub.required = True
-    _build_prep_parser(sub)
     _build_train_parser(sub)
     _build_test_parser(sub)
 
     args = parser.parse_args()
 
     try:
-        if args.action == 'prep':
-            _run_prep(args)
-        elif args.action == 'train':
+        if args.action == 'train':
             _run_train(args)
         elif args.action == 'test':
             _run_test(args)
@@ -159,26 +108,6 @@ Examples:
 # ---------------------------------------------------------------------------
 # Action handlers
 # ---------------------------------------------------------------------------
-
-def _run_prep(args):
-    from .prep_data import prep_data
-
-    ignore = [c.strip() for c in args.ignore_columns.split(',') if c.strip()]
-    icv_correction = args.icv_correction.lower() == 'true'
-
-    prep_data(
-        input_file=args.input,
-        spare_type=args.type,
-        key_variable=args.key_variable,
-        target_column=args.target_column,
-        ignore_columns=ignore or None,
-        output_file=args.output,
-        icv_correction=icv_correction,
-        icv_column=args.icv_column,
-        age_col=args.age_col,
-        sex_col=args.sex_col,
-    )
-
 
 def _run_train(args):
     from .train import train_model
@@ -193,14 +122,16 @@ def _run_train(args):
         cfg = json.load(fh)
 
     desc      = cfg.get('description', {})
-    data      = cfg.get('data', {})
-    variables = cfg.get('variables', {})
+    inp       = cfg.get('input', {})
+    out_cfg   = cfg.get('output', {})
     model_cfg = cfg.get('model', {})
 
     # Validate required fields
-    for section, key in [('description', 'spare_type'), ('description', 'model_tag'),
-                          ('description', 'run_tag'),
-                          ('data', 'input'), ('data', 'output')]:
+    for section, key in [
+        ('description', 'spare_type'), ('description', 'model_tag'),
+        ('description', 'run_tag'), ('input', 'in_csv'), ('output', 'out_dir'),
+        ('input', 'target_col'),
+    ]:
         if not cfg.get(section, {}).get(key):
             raise ValueError(f"Config missing required field: '{section}.{key}'")
 
@@ -208,16 +139,27 @@ def _run_train(args):
     model_tag     = str(desc['model_tag'])
     model_version = str(desc.get('model_version', '1.0'))
     run_tag       = str(desc['run_tag'])
-    input_file    = os.path.join(config_dir, data['input'])
-    output_folder = os.path.join(config_dir, data['output'])
 
-    key_variable   = str(variables.get('key_variable', 'MRID'))
-    target_column  = variables.get('target_column')
-    ignore_columns = str(variables.get('ignore_columns', ''))
-    icv_correction = bool(variables.get('icv_correction', False))
-    icv_column     = str(variables.get('icv_column', 'DL_MUSE_Volume_702'))
-    age_col        = str(variables.get('age_col', 'Age'))
-    sex_col        = str(variables.get('sex_col', 'Sex'))
+    # Input section
+    in_dir        = str(inp.get('in_dir', '.'))
+    in_csv        = str(inp['in_csv'])
+    columns       = inp.get('in_cols') or None   # list of patterns; trailing '*' = prefix wildcard
+    key_variable  = str(inp.get('key_col', 'MRID'))
+    target_column = inp.get('target_col')
+    ignore_columns = str(inp.get('ignore_cols', ''))
+    icv_correction = bool(inp.get('icv_correction', False))
+    icv_column    = str(inp.get('icv_col', 'DL_MUSE_Volume_702'))
+    age_col       = str(inp.get('age_col', 'Age'))
+    sex_col       = str(inp.get('sex_col', 'Sex'))
+
+    # Output section
+    out_dir       = str(out_cfg['out_dir'])
+    out_csv       = str(out_cfg.get('out_csv', 'predictions.csv'))
+    out_cols      = out_cfg.get('out_cols') or None
+    out_model_dir = str(out_cfg.get('out_model_dir', ''))
+
+    input_file    = os.path.join(config_dir, in_dir, in_csv)
+    output_folder = os.path.join(config_dir, out_dir)
 
     svm_kernel            = str(model_cfg.get('svm_kernel', 'linear'))
     hyperparameter_tuning = bool(model_cfg.get('hyperparameter_tuning', True))
@@ -278,28 +220,52 @@ def _run_train(args):
         with open(os.path.join(run_dir, 'meta.json'), 'w') as fh:
             json.dump(meta, fh, indent=2)
 
-        # Inline prep — runs when target_column is set in the variables section
-        if target_column:
-            from .prep_data import prep_data
-            _log(f"Prep       : {data['input']} → prepped.csv", log_fh)
-            raw_file   = input_file
-            input_file = os.path.join(run_dir, 'prepped.csv')
-            ignore = [c.strip() for c in ignore_columns.split(',') if c.strip()]
-            prep_data(
-                input_file=raw_file,
-                spare_type=spare_type,
-                key_variable=key_variable,
-                target_column=target_column,
-                ignore_columns=ignore or None,
-                output_file=input_file,
-                icv_correction=icv_correction,
-                icv_column=icv_column,
-                age_col=age_col,
-                sex_col=sex_col,
-            )
-            _log(f"Prep done  : {input_file}", log_fh)
+        # Prep step — always runs; saves prepped.csv alongside the model
+        from .prep_data import prep_data
+        _log(f"Prep       : {in_csv} → prepped.csv", log_fh)
+        raw_file   = input_file
+        input_file = os.path.join(run_dir, 'prepped.csv')
+        ignore = [c.strip() for c in ignore_columns.split(',') if c.strip()]
+        _, cvm_mean_age = prep_data(
+            input_file=raw_file,
+            spare_type=spare_type,
+            key_variable=key_variable,
+            target_column=target_column,
+            columns=columns,
+            ignore_columns=ignore or None,
+            output_file=input_file,
+            icv_correction=icv_correction,
+            icv_column=icv_column,
+            age_col=age_col,
+            sex_col=sex_col,
+        )
+        _log(f"Prep done  : {input_file}", log_fh)
 
-        model_path = os.path.join(run_dir, f"{run_tag}.joblib")
+        # Prep config saved into the model for automatic application at inference time
+        prep_config = {
+            'spare_type':     spare_type,
+            'key_variable':   key_variable,
+            'target_column':  target_column,
+            'columns':        columns,
+            'ignore_columns': ignore or None,
+            'icv_correction': icv_correction,
+            'icv_column':     icv_column,
+            'age_col':        age_col,
+            'sex_col':        sex_col,
+            'cvm_mean_age':   cvm_mean_age,   # None for non-CVM types
+        }
+
+        # Output config saved into the model so inference can use the right filename/columns
+        output_config = {
+            'out_csv':  out_csv,
+            'out_cols': out_cols,
+        }
+
+        # Model lives in out_model_dir subdir within run_dir (if specified)
+        model_dir = os.path.join(run_dir, out_model_dir) if out_model_dir else run_dir
+        if out_model_dir:
+            os.makedirs(model_dir)
+        model_path = os.path.join(model_dir, f"{run_tag}.joblib")
         _log(
             f"SVM        : kernel={svm_kernel}  cv_fold={cv_fold}"
             f"  hp_tuning={hyperparameter_tuning}  class_bal={class_balancing}",
@@ -322,6 +288,8 @@ def _run_train(args):
             verbose=verbose,
             model_tag=model_tag,
             model_version=model_version,
+            prep_config=prep_config,
+            output_config=output_config,
         )
 
         elapsed = str(datetime.now() - t0).split('.')[0]
@@ -387,32 +355,10 @@ def _run_test(args):
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Inline prep — if --prep-type is given, treat --input as raw data
-    input_file = args.input
-    if args.prep_type:
-        from .prep_data import prep_data
-        prepped_path = os.path.join(args.output_dir, 'prepped.csv')
-        ignore = [c.strip() for c in args.ignore_columns.split(',') if c.strip()]
-        prep_data(
-            input_file=args.input,
-            spare_type=args.prep_type,
-            key_variable=args.key_variable,
-            target_column=None,
-            ignore_columns=ignore or None,
-            output_file=prepped_path,
-            icv_correction=args.icv_correction.lower() == 'true',
-            icv_column=args.icv_column,
-            age_col=args.age_col,
-            sex_col=args.sex_col,
-        )
-        input_file = prepped_path
-        print(f"Prepped data saved to: {prepped_path}")
-
     infer_model(
-        input_file=input_file,
+        input_file=args.input,
         model_path=model_path,
         output_dir=args.output_dir,
-        key_variable=args.key_variable,
         append_spare_tag=args.append_spare_tag,
     )
 

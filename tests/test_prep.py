@@ -9,38 +9,38 @@ from tests.conftest import N, ROI_GENERIC, ROI_CVM
 
 class TestOutputFormat:
     def test_cl_col0_is_mrid(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column='DX',
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column='DX',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         assert df.columns[0] == 'MRID'
 
     def test_cl_col1_is_target(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column='DX',
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column='DX',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         assert df.columns[1] == 'DX'
 
     def test_row_count_preserved(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column='DX',
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column='DX',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         assert len(df) == N
 
     def test_ignored_columns_dropped(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column='DX',
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column='DX',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         assert 'Study' not in df.columns
 
     def test_feature_columns_present(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column='DX',
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column='DX',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         for col in ROI_GENERIC:
             assert col in df.columns
 
     def test_rg_col1_is_target(self, raw_rg_csv, tmp_path):
-        df = prep_data(raw_rg_csv, 'RG', target_column='Age',
+        df, _ = prep_data(raw_rg_csv, 'RG', target_column='Age',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         assert df.columns[1] == 'Age'
@@ -58,7 +58,7 @@ class TestInferenceMode:
     """When target_column is absent from the input, output should have no target column."""
 
     def test_no_target_col_in_output(self, raw_cl_csv, tmp_path):
-        df = prep_data(raw_cl_csv, 'CL', target_column=None,
+        df, _ = prep_data(raw_cl_csv, 'CL', target_column=None,
                        ignore_columns=['Study', 'DX'],
                        output_file=str(tmp_path / 'out.csv'))
         assert 'DX' not in df.columns
@@ -67,7 +67,7 @@ class TestInferenceMode:
 
 class TestCVMPrep:
     def test_confounds_removed_from_features(self, raw_cvm_csv, tmp_path):
-        df = prep_data(raw_cvm_csv, 'CVM', target_column='Disease',
+        df, _ = prep_data(raw_cvm_csv, 'CVM', target_column='Disease',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         feature_cols = df.columns[2:].tolist()
@@ -76,7 +76,7 @@ class TestCVMPrep:
         assert 'DL_MUSE_Volume_702' not in feature_cols
 
     def test_roi_features_retained(self, raw_cvm_csv, tmp_path):
-        df = prep_data(raw_cvm_csv, 'CVM', target_column='Disease',
+        df, _ = prep_data(raw_cvm_csv, 'CVM', target_column='Disease',
                        ignore_columns=['Study'],
                        output_file=str(tmp_path / 'out.csv'))
         for col in ROI_CVM:
@@ -107,7 +107,7 @@ class TestICVCorrection:
             'DL_MUSE_Volume_2': np.random.normal(5_000, 500, 20),
         })
         df.to_csv(tmp_path / 'icv.csv', index=False)
-        out = prep_data(str(tmp_path / 'icv.csv'), 'CL',
+        out, _ = prep_data(str(tmp_path / 'icv.csv'), 'CL',
                         target_column='DX',
                         icv_correction=True,
                         icv_column='DL_MUSE_Volume_702',

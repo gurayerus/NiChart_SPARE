@@ -7,7 +7,7 @@ Workflow:
   3. inference.infer_model() — apply model → predictions CSV
 """
 
-__version__ = "0.1.0"
-__author__  = "Kyunglok Baik"
+__version__ = "1.0.0"
+__author__  = "Guray Erus"
 __email__   = "software@cbica.upenn.edu"
-__url__     = "https://github.com/CBICA/NiChart_SPARE"
+__url__     = "https://github.com/gurayerus/NiChart_SPARE"

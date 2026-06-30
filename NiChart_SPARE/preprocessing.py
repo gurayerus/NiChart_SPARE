@@ -190,7 +190,7 @@ def preprocess_classification_data(
         if feature_encoder != None:
             print("Running feature encoding.")
             for ec in feature_encoder.keys():
-                X[ec] = feature_encoder[ec].fit_transform(X[ec])
+                X[ec] = feature_encoder[ec].transform(X[ec])
         
         if feature_scaler != None:
             print("Running feature scaling.")
@@ -201,11 +201,25 @@ def preprocess_classification_data(
 
 import warnings
 
-def apply_cvm_residualization(df: pd.DataFrame, 
-                              age_col='Age', 
-                              sex_col='Sex', 
-                              dlicv_col='DL_MUSE_Volume_702'):
-    
+def apply_cvm_residualization(df: pd.DataFrame,
+                              age_col='Age',
+                              sex_col='Sex',
+                              dlicv_col='DL_MUSE_Volume_702',
+                              mean_age: float = None):
+    """Apply CVM residualization.
+
+    Parameters
+    ----------
+    mean_age : float or None
+        Mean age used for centering during training.  Pass the saved value at
+        inference time so the centering is identical to training.  When None
+        (training), the mean is computed from the current data and returned
+        via the second element of the return tuple.
+
+    Returns
+    -------
+    (df_residualized, mean_age_used)
+    """
     df = df.rename(columns={dlicv_col:'DLICV'})
 
     all_columns = df.columns.tolist()
@@ -214,8 +228,10 @@ def apply_cvm_residualization(df: pd.DataFrame,
     current_dir = os.path.dirname(os.path.abspath(__file__))
     df_params = pd.read_csv(os.path.join(current_dir, 'reference', 'covparams_scaler_sparecvms_dl.csv'))
 
-    df['Age_Original'] = df[age_col]#.copy(deep=True)
-    meanage = df['Age_Original'].mean() # change to a fixed location in residualization map
+    df['Age_Original'] = df[age_col]
+    if mean_age is None:
+        mean_age = float(df['Age_Original'].mean())
+    meanage = mean_age
 
     df['Mean_centered_age'] = df['Age_Original']-meanage
     df['DLICV_Original'] = df['DLICV'].copy(deep=True)
@@ -245,11 +261,9 @@ def apply_cvm_residualization(df: pd.DataFrame,
     
 
     df = df[all_columns]
-    
-    #features = features + [sex_col,]
 
     df = df.rename(columns={'DLICV': dlicv_col})
-    
-    return df #, features
+
+    return df, mean_age
 
 

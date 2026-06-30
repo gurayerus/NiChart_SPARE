@@ -1,0 +1,13 @@
+[2026-06-30 16:57:48]  Training started
+[2026-06-30 16:57:48]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/train_config.json
+[2026-06-30 16:57:48]  Run tag    : SPARE_BA_v1.0
+[2026-06-30 16:57:48]  SPARE type : BA  |  model: SPARE_BA v1.0
+[2026-06-30 16:57:48]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0
+[2026-06-30 16:57:48]  Prep       : raw_data.csv → prepped.csv
+[2026-06-30 16:57:48]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/prepped.csv
+[2026-06-30 16:57:48]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=False
+[2026-06-30 16:57:48]  Training started
+[2026-06-30 16:57:51]  Training complete (elapsed: 0:00:02)
+[2026-06-30 16:57:51]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/model/SPARE_BA_v1.0.joblib
+[2026-06-30 16:57:51]  Metrics    : metrics.json
+[2026-06-30 16:57:51]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0

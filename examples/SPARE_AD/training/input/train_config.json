@@ -27,10 +27,10 @@
   },
 
   "output": {
-    "out_dir": "../models",
-    "out_csv": "predictions.csv",
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
     "out_cols": ["MRID", "SPARE_AD"],
-    "out_model_dir": "model"
+    "out_model_dir": "model" 
   }
 
 }

@@ -8,11 +8,13 @@ Produces a standardized CSV:
 
 What this module handles (no encoding or scaling — those live in train/inference):
   - Loading and column subsetting
+  - Schema validation against an expected column list (with wildcard patterns)
   - Optional ICV correction (ROI volumes divided by ICV)
   - CVM-type residualization (Age / Sex / ICV confound removal)
   - Dropping user-specified ignore columns
 """
 
+import sys
 import pandas as pd
 from .preprocessing import (
     load_csv_data,
@@ -25,54 +27,87 @@ from .preprocessing import (
 CVM_TYPES = frozenset({'CVM', 'HT', 'T2B', 'SM', 'BMI'})
 
 
+def _validate_columns_schema(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    """Validate df against an expected column schema and filter to matched columns.
+
+    Patterns ending with '*' are prefix-matched against actual column names.
+    All other patterns require an exact match.  Mismatches produce warnings but
+    do not abort — the function always returns a filtered DataFrame.
+    """
+    exact = [c for c in columns if not c.endswith('*')]
+    prefixes = [c[:-1] for c in columns if c.endswith('*')]
+
+    matched = {
+        col for col in df.columns
+        if col in exact or any(col.startswith(p) for p in prefixes)
+    }
+
+    missing_exact = [c for c in exact if c not in df.columns]
+    if missing_exact:
+        print(
+            f"Warning: column(s) declared in schema not found in CSV: {missing_exact}",
+            file=sys.stderr,
+        )
+
+    empty_prefixes = [p for p in prefixes if not any(c.startswith(p) for c in df.columns)]
+    if empty_prefixes:
+        print(
+            f"Warning: no columns matched pattern(s): {[p + '*' for p in empty_prefixes]}",
+            file=sys.stderr,
+        )
+
+    unmatched = [c for c in df.columns if c not in matched]
+    if unmatched:
+        print(
+            f"Warning: column(s) not in schema, excluded from processing: {unmatched}",
+            file=sys.stderr,
+        )
+
+    return df[[c for c in df.columns if c in matched]]
+
+
 def prep_data(
     input_file: str,
     spare_type: str,
     key_variable: str = 'MRID',
     target_column: str = None,
+    columns: list = None,
     ignore_columns: list = None,
     output_file: str = None,
     icv_correction: bool = False,
     icv_column: str = 'DL_MUSE_Volume_702',
     age_col: str = 'Age',
     sex_col: str = 'Sex',
-) -> pd.DataFrame:
+    cvm_mean_age: float = None,
+) -> tuple:
     """
     Prepare a raw input CSV for SVM training or inference.
 
     Parameters
     ----------
-    input_file : str
-        Path to the raw input CSV.
-    spare_type : str
-        SPARE task type: CL, RG, AD, BA, CVM, HT, T2B, SM, BMI.
-        Determines which task-specific transforms are applied.
-    key_variable : str
-        Column that uniquely identifies each sample (default: MRID).
-    target_column : str or None
-        Column to predict.  May be None or absent for inference inputs.
-    ignore_columns : list or None
-        Columns to drop before writing output (e.g. ['Study', 'SITE', 'Sex']).
-    output_file : str or None
-        If provided, write the prepared DataFrame to this CSV path.
-    icv_correction : bool
-        Divide all DL_MUSE_Volume_* ROI columns by the ICV column.
-    icv_column : str
-        ICV column name used for correction (default: DL_MUSE_Volume_702).
-    age_col : str
-        Age column name, used only for CVM residualization.
-    sex_col : str
-        Sex column name, used only for CVM residualization.
+    columns : list[str] or None
+        Expected column names/patterns for the input CSV.  A trailing '*' acts as a
+        prefix wildcard (e.g. 'DL_MUSE_Volume_*' matches all columns starting with
+        that string).  When provided, the CSV is validated against this schema and
+        filtered to only the matched columns; mismatches produce warnings but do not
+        abort.  When None, no schema validation is performed.
 
     Returns
     -------
-    pd.DataFrame
-        Columns: [key_variable, target_column (if present), feature1, feature2, ...]
+    (df, cvm_mean_age) : tuple[pd.DataFrame, float | None]
+        df            — prepared DataFrame [key_variable, target?, features...]
+        cvm_mean_age  — mean age used for CVM centering (None for non-CVM types).
+                        Save this value and pass it back at inference time via
+                        the cvm_mean_age parameter so centering is identical.
     """
     spare_type = spare_type.upper()
 
     # --- Load and drop ignored columns ---
     df = load_csv_data(input_file, drop_columns=ignore_columns or [])
+
+    # --- Validate and filter to declared column schema (if provided) ---
+    if columns:
+        df = _validate_columns_schema(df, columns)
 
     if key_variable not in df.columns:
         raise ValueError(f"Key variable '{key_variable}' not found in input.")
@@ -88,7 +123,10 @@ def prep_data(
 
     if spare_type in CVM_TYPES:
         _check_cvm_columns(df, age_col, sex_col, icv_column)
-        df = apply_cvm_residualization(df, age_col=age_col, sex_col=sex_col, dlicv_col=icv_column)
+        df, cvm_mean_age = apply_cvm_residualization(
+            df, age_col=age_col, sex_col=sex_col, dlicv_col=icv_column,
+            mean_age=cvm_mean_age,
+        )
         # Confound columns have been absorbed into residuals; drop them from features
         for col in [age_col, sex_col, icv_column]:
             if col in df.columns:
@@ -107,7 +145,7 @@ def prep_data(
         df.to_csv(output_file, index=False)
         print(f"Saved prepared data to: {output_file}")
 
-    return df
+    return df, cvm_mean_age
 
 
 def _check_cvm_columns(df: pd.DataFrame, age_col: str, sex_col: str, icv_col: str) -> None:

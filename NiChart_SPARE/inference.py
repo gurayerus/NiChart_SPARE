@@ -1,14 +1,10 @@
 """
-SVM model inference on standardized prepared data.
+SVM model inference on raw or prepared data.
 
-Expected input CSV format (produced by prep_data.prep_data):
-  Column containing key_variable (MRID)          — identifies each sample
-  Feature columns matching training feature names — used for prediction
-  Target column (optional)                        — when present, written as GT_* in output
-
-The module loads the encoder and scaler saved during training and applies
-them to the new data before predicting.  No task-specific data transforms
-are applied here — those belong in prep_data.py and must be run first.
+If the model was trained with inline prep (target_column set in config), the
+prep configuration is stored inside the .joblib file and is applied automatically
+before inference.  Otherwise the input must already be in the standard prepared
+format (column 0 = key variable, remaining columns = features).
 """
 
 import joblib
@@ -30,7 +26,7 @@ def infer_model(
     output_dir: str,
     key_variable: str = 'MRID',
     append_spare_tag: str = '',
-) -> pd.DataFrame:
+    ) -> pd.DataFrame:
     """
     Apply a trained model to a prepared input CSV and write predictions.
 
@@ -56,16 +52,45 @@ def infer_model(
         Predictions DataFrame (also written to output_dir/predictions.csv).
     """
     # --- Load model ---
-    model_data   = joblib.load(model_path)
-    model_info   = model_data['model']
-    meta_data    = model_data['meta_data']
-    preprocessor = model_data['preprocessor']
+    model_data    = joblib.load(model_path)
+    model_info    = model_data['model']
+    meta_data     = model_data['meta_data']
+    preprocessor  = model_data['preprocessor']
+    prep_config   = model_data.get('prep_config')
+    output_config = model_data.get('output_config')
 
     model       = model_info['model']
     bias_terms  = model_info['bias']
     spare_type  = meta_data['spare_type']
     target_col  = meta_data['training_data_description']['target_column']
     feature_names = meta_data['training_data_description']['feature_names']
+
+    # Use key_variable from stored prep config when available
+    if prep_config and prep_config.get('key_variable'):
+        key_variable = prep_config['key_variable']
+
+    # --- Auto-apply prep when the model stores a prep config ---
+    if prep_config:
+        from .prep_data import prep_data
+        import os as _os
+        _os.makedirs(output_dir, exist_ok=True)
+        prepped_path = _os.path.join(output_dir, 'prepped.csv')
+        prep_data(
+            input_file=input_file,
+            spare_type=prep_config['spare_type'],
+            key_variable=key_variable,
+            target_column=prep_config.get('target_column'),
+            columns=prep_config.get('columns'),
+            ignore_columns=prep_config.get('ignore_columns') or None,
+            output_file=prepped_path,
+            icv_correction=prep_config.get('icv_correction', False),
+            icv_column=prep_config.get('icv_column', 'DL_MUSE_Volume_702'),
+            age_col=prep_config.get('age_col', 'Age'),
+            sex_col=prep_config.get('sex_col', 'Sex'),
+            cvm_mean_age=prep_config.get('cvm_mean_age'),
+        )
+        input_file = prepped_path
+        print(f"Prepped data saved to: {prepped_path}")
 
     # --- Load and validate input data ---
     df = load_csv_data(input_file)
@@ -124,9 +149,23 @@ def infer_model(
     if has_target and y is not None:
         out[f"GT_{spare_type}"] = y.values
 
+    # Apply output column filter and filename from saved output_config
+    if output_config:
+        out_cols = output_config.get('out_cols')
+        if out_cols:
+            missing = [c for c in out_cols if c not in out.columns]
+            if missing:
+                import sys as _sys
+                print(f"Warning: out_cols references unknown column(s), skipped: {missing}",
+                      file=_sys.stderr)
+            out = out[[c for c in out_cols if c in out.columns]]
+        out_csv = output_config.get('out_csv', 'predictions.csv')
+    else:
+        out_csv = 'predictions.csv'
+
     import os
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, 'predictions.csv')
+    output_file = os.path.join(output_dir, out_csv)
     out.to_csv(output_file, index=False)
     print(f"Predictions saved to: {output_file}")
 

@@ -1,17 +1,17 @@
 {
   "description": {
-    "spare_type": "AD",
-    "model_tag": "SPARE_AD",
+    "spare_type": "BA",
+    "model_tag": "SPARE_BA",
     "model_version": "1.0",
-    "run_tag": "SPARE_AD_v1.0"
+    "run_tag": "SPARE_BA_v1.0"
   },
 
   "input": {
     "in_dir": ".",
     "in_csv": "raw_data.csv",
-    "in_cols": ["MRID", "disease", "Age", "Sex", "DL_MUSE_Volume_*"],
+    "in_cols": ["MRID", "Age", "Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"],
     "key_col": "MRID",
-    "target_col": "disease",
+    "target_col": "Age",
     "age_col": "Age",
     "sex_col": "Sex"
   },
@@ -21,15 +21,15 @@
     "hyperparameter_tuning": true,
     "train_whole": true,
     "cv_fold": 5,
-    "class_balancing": true,
-    "bias_correction": 0,
+    "class_balancing": false,
+    "bias_correction": 1,
     "verbose": 1
   },
 
   "output": {
-    "out_dir": "../models",
-    "out_csv": "predictions.csv",
-    "out_cols": ["MRID", "SPARE_AD"],
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
+    "out_cols": ["MRID", "SPARE_BA"],
     "out_model_dir": "model"
   }
 
