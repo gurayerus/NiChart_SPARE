@@ -1,17 +1,18 @@
 """
 Task-specific data preparation for SVM training and inference.
 
-Produces a standardized CSV:
-  Column 0 : key_variable (MRID)
-  Column 1 : target_column  (omitted when not present in the input, e.g. inference)
-  Column 2+: input features (ready to feed directly into train.py / inference.py)
+Produces a standardized DataFrame / CSV:
+  Column 0 : key_col   (MRID)
+  Column 1 : target_col  (omitted when not present in the input, e.g. inference)
+  Column 2+: feature columns derived from data_cols patterns, after any pre-processing
 
 What this module handles (no encoding or scaling — those live in train/inference):
-  - Loading and column subsetting
-  - Schema validation against an expected column list (with wildcard patterns)
-  - Optional ICV correction (ROI volumes divided by ICV)
-  - CVM-type residualization (Age / Sex / ICV confound removal)
-  - Dropping user-specified ignore columns
+  - Loading the raw CSV
+  - Selecting and ordering feature columns by pattern list (data_cols)
+  - Applying explicit value mappings (e.g. Sex: {M: 0, F: 1})
+  - Pre-processing steps declared in config:
+      residualization  — Age/Sex/ICV confound removal (pre-fitted CVM coefficients)
+      icv_correction   — divide ROI volumes by ICV
 """
 
 import sys
@@ -23,61 +24,50 @@ from .preprocessing import (
     apply_cvm_residualization,
 )
 
-# Types that require Age/Sex/ICV residualization before classification
-CVM_TYPES = frozenset({'CVM', 'HT', 'T2B', 'SM', 'BMI'})
 
+def _expand_data_cols(data_cols: list, available: list) -> tuple:
+    """Expand wildcard patterns against available column names in declaration order.
 
-def _validate_columns_schema(df: pd.DataFrame, columns: list) -> pd.DataFrame:
-    """Validate df against an expected column schema and filter to matched columns.
-
-    Patterns ending with '*' are prefix-matched against actual column names.
-    All other patterns require an exact match.  Mismatches produce warnings but
-    do not abort — the function always returns a filtered DataFrame.
+    Returns (matched_cols, unmatched_available) where:
+      matched_cols        — ordered list of columns that satisfy at least one pattern
+      unmatched_available — CSV columns not matched by any pattern (will be excluded)
     """
-    exact = [c for c in columns if not c.endswith('*')]
-    prefixes = [c[:-1] for c in columns if c.endswith('*')]
+    matched = []
+    seen = set()
+    for pattern in data_cols:
+        if pattern.endswith('*'):
+            prefix = pattern[:-1]
+            for c in available:
+                if c.startswith(prefix) and c not in seen:
+                    matched.append(c)
+                    seen.add(c)
+        else:
+            if pattern in available and pattern not in seen:
+                matched.append(pattern)
+                seen.add(pattern)
+            elif pattern not in available:
+                print(f"Warning: data_cols entry '{pattern}' not found in input CSV.", file=sys.stderr)
+    unmatched = [c for c in available if c not in seen]
+    return matched, unmatched
 
-    matched = {
-        col for col in df.columns
-        if col in exact or any(col.startswith(p) for p in prefixes)
-    }
 
-    missing_exact = [c for c in exact if c not in df.columns]
-    if missing_exact:
-        print(
-            f"Warning: column(s) declared in schema not found in CSV: {missing_exact}",
-            file=sys.stderr,
+def _check_residualization_columns(df: pd.DataFrame, age_col: str, sex_col: str, icv_col: str) -> None:
+    missing = [c for c in [age_col, sex_col, icv_col] if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"residualization requires columns [{age_col}, {sex_col}, {icv_col}]; "
+            f"missing: {missing}"
         )
-
-    empty_prefixes = [p for p in prefixes if not any(c.startswith(p) for c in df.columns)]
-    if empty_prefixes:
-        print(
-            f"Warning: no columns matched pattern(s): {[p + '*' for p in empty_prefixes]}",
-            file=sys.stderr,
-        )
-
-    unmatched = [c for c in df.columns if c not in matched]
-    if unmatched:
-        print(
-            f"Warning: column(s) not in schema, excluded from processing: {unmatched}",
-            file=sys.stderr,
-        )
-
-    return df[[c for c in df.columns if c in matched]]
 
 
 def prep_data(
     input_file: str,
-    spare_type: str,
-    key_variable: str = 'MRID',
-    target_column: str = None,
-    columns: list = None,
-    ignore_columns: list = None,
+    key_col: str = 'MRID',
+    target_col: str = None,
+    data_cols: list = None,
+    mappings: dict = None,
+    preprocessing: dict = None,
     output_file: str = None,
-    icv_correction: bool = False,
-    icv_column: str = 'DL_MUSE_Volume_702',
-    age_col: str = 'Age',
-    sex_col: str = 'Sex',
     cvm_mean_age: float = None,
 ) -> tuple:
     """
@@ -85,73 +75,105 @@ def prep_data(
 
     Parameters
     ----------
-    columns : list[str] or None
-        Expected column names/patterns for the input CSV.  A trailing '*' acts as a
-        prefix wildcard (e.g. 'DL_MUSE_Volume_*' matches all columns starting with
-        that string).  When provided, the CSV is validated against this schema and
-        filtered to only the matched columns; mismatches produce warnings but do not
-        abort.  When None, no schema validation is performed.
+    input_file : str
+        Path to the raw input CSV.
+    key_col : str
+        Column that uniquely identifies each sample (default: MRID).
+    target_col : str or None
+        Column to predict.  When absent from the CSV the output has no target column
+        (inference mode).
+    data_cols : list[str] or None
+        Feature column names / patterns (trailing '*' = prefix wildcard).
+        Lists only the feature columns — key_col and target_col are always added
+        automatically.  Columns in the CSV not matched by any pattern are excluded
+        with a warning.  When None, all columns except key_col and target_col are used.
+    mappings : dict or None
+        Per-column value remapping applied before preprocessing.
+        e.g. {"Sex": {"M": 0, "F": 1}}
+    preprocessing : dict or None
+        Pre-processing steps to apply.  Supported keys:
+          "residualization": {"age_col", "sex_col", "icv_col"} — CVM residualization;
+              the three confound columns are dropped from features after the step.
+          "icv_correction":  {"icv_col"} — divide all DL_MUSE_Volume_ ROIs by ICV.
+    output_file : str or None
+        If given, write the prepared DataFrame to this CSV path.
+    cvm_mean_age : float or None
+        Mean age used for centering during training residualization.  Pass the saved
+        value at inference time so centering is identical.  When None (training),
+        the mean is computed from the current data and returned.
 
     Returns
     -------
     (df, cvm_mean_age) : tuple[pd.DataFrame, float | None]
-        df            — prepared DataFrame [key_variable, target?, features...]
-        cvm_mean_age  — mean age used for CVM centering (None for non-CVM types).
-                        Save this value and pass it back at inference time via
-                        the cvm_mean_age parameter so centering is identical.
     """
-    spare_type = spare_type.upper()
+    # --- Load ---
+    df = load_csv_data(input_file)
 
-    # --- Load and drop ignored columns ---
-    df = load_csv_data(input_file, drop_columns=ignore_columns or [])
+    if key_col not in df.columns:
+        raise ValueError(f"Key column '{key_col}' not found in input.")
 
-    # --- Validate and filter to declared column schema (if provided) ---
-    if columns:
-        df = _validate_columns_schema(df, columns)
+    has_target = target_col is not None and target_col in df.columns
 
-    if key_variable not in df.columns:
-        raise ValueError(f"Key variable '{key_variable}' not found in input.")
+    # --- Select feature columns ---
+    # candidate pool excludes key and target so they are never accidentally treated as features
+    candidates = [c for c in df.columns if c != key_col and c != target_col]
 
-    has_target = target_column is not None and target_column in df.columns
+    if data_cols is not None:
+        feature_cols, unmatched = _expand_data_cols(data_cols, candidates)
+        if unmatched:
+            print(
+                f"Warning: CSV column(s) not covered by data_cols, excluded: {unmatched}",
+                file=sys.stderr,
+            )
+    else:
+        feature_cols = candidates  # use everything
+
+    # Build working DataFrame: [key_col, (target_col?), feature_cols...]
+    select = [key_col]
     if has_target:
-        validate_dataframe(df, target_column)
+        select.append(target_col)
+    # Include columns needed for preprocessing even if not final features
+    # (preprocessing steps drop them after use)
+    select += feature_cols
+    df = df[[c for c in select if c in df.columns]]
 
-    # --- Task-specific transforms ---
+    if has_target:
+        validate_dataframe(df, target_col)
 
-    if icv_correction:
-        df = correct_icv(df, icv_col=icv_column, roi_col_keyword='DL_MUSE_Volume_')
-
-    if spare_type in CVM_TYPES:
-        _check_cvm_columns(df, age_col, sex_col, icv_column)
-        df, cvm_mean_age = apply_cvm_residualization(
-            df, age_col=age_col, sex_col=sex_col, dlicv_col=icv_column,
-            mean_age=cvm_mean_age,
-        )
-        # Confound columns have been absorbed into residuals; drop them from features
-        for col in [age_col, sex_col, icv_column]:
+    # --- Apply value mappings ---
+    if mappings:
+        for col, mapping in mappings.items():
             if col in df.columns:
-                df = df.drop(columns=[col])
+                df[col] = df[col].map(mapping)
+            else:
+                print(f"Warning: mapping declared for column '{col}' which is not in data.", file=sys.stderr)
 
-    # --- Standardize column order: [MRID, target?, features...] ---
-    reserved = [key_variable]
-    if has_target:
-        reserved.append(target_column)
-    feature_cols = [c for c in df.columns if c not in reserved]
-    df = df[reserved + feature_cols]
+    # --- Apply pre-processing steps ---
+    if preprocessing:
+        if 'residualization' in preprocessing:
+            params = preprocessing['residualization']
+            age_c = params.get('age_col', 'Age')
+            sex_c = params.get('sex_col', 'Sex')
+            icv_c = params.get('icv_col', 'DL_MUSE_Volume_702')
+            _check_residualization_columns(df, age_c, sex_c, icv_c)
+            df, cvm_mean_age = apply_cvm_residualization(
+                df, age_col=age_c, sex_col=sex_c, dlicv_col=icv_c,
+                mean_age=cvm_mean_age,
+            )
+            for col in [age_c, sex_c, icv_c]:
+                if col in df.columns:
+                    df = df.drop(columns=[col])
 
-    print(f"Prepared data: {len(df)} samples, {len(feature_cols)} features")
+        if 'icv_correction' in preprocessing:
+            params = preprocessing['icv_correction']
+            icv_c = params.get('icv_col', 'DL_MUSE_Volume_702')
+            df = correct_icv(df, icv_col=icv_c, roi_col_keyword='DL_MUSE_Volume_')
+
+    feature_count = len(df.columns) - (1 + int(has_target))
+    print(f"Prepared data: {len(df)} samples, {feature_count} features")
 
     if output_file:
         df.to_csv(output_file, index=False)
         print(f"Saved prepared data to: {output_file}")
 
     return df, cvm_mean_age
-
-
-def _check_cvm_columns(df: pd.DataFrame, age_col: str, sex_col: str, icv_col: str) -> None:
-    missing = [c for c in [age_col, sex_col, icv_col] if c not in df.columns]
-    if missing:
-        raise ValueError(
-            f"CVM residualization requires columns {[age_col, sex_col, icv_col]}; "
-            f"missing: {missing}"
-        )

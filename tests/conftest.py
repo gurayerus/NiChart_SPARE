@@ -92,9 +92,8 @@ def raw_cvm_csv(tmp_path):
 def prepped_cl_csv(raw_cl_csv, tmp_path):
     from NiChart_SPARE.prep_data import prep_data
     out = str(tmp_path / 'prepped_cl.csv')
-    prep_data(raw_cl_csv, 'CL',
-              target_column='DX', ignore_columns=['Study'],
-              output_file=out)
+    prep_data(raw_cl_csv, key_col='MRID', target_col='DX',
+              data_cols=['DL_MUSE_Volume_*'], output_file=out)
     return out
 
 
@@ -102,9 +101,8 @@ def prepped_cl_csv(raw_cl_csv, tmp_path):
 def prepped_rg_csv(raw_rg_csv, tmp_path):
     from NiChart_SPARE.prep_data import prep_data
     out = str(tmp_path / 'prepped_rg.csv')
-    prep_data(raw_rg_csv, 'RG',
-              target_column='Age', ignore_columns=['Study'],
-              output_file=out)
+    prep_data(raw_rg_csv, key_col='MRID', target_col='Age',
+              data_cols=['DL_MUSE_Volume_*'], output_file=out)
     return out
 
 
@@ -112,8 +110,11 @@ def prepped_rg_csv(raw_rg_csv, tmp_path):
 def prepped_cvm_csv(raw_cvm_csv, tmp_path):
     from NiChart_SPARE.prep_data import prep_data
     out = str(tmp_path / 'prepped_cvm.csv')
-    prep_data(raw_cvm_csv, 'CVM',
-              target_column='Disease', ignore_columns=['Study'],
+    prep_data(raw_cvm_csv, key_col='MRID', target_col='Disease',
+              data_cols=['Age', 'Sex', 'DL_MUSE_Volume_702', 'H_DL_MUSE_Volume_*'],
+              preprocessing={'residualization': {
+                  'age_col': 'Age', 'sex_col': 'Sex', 'icv_col': 'DL_MUSE_Volume_702',
+              }},
               output_file=out)
     return out
 

@@ -1,13 +1,13 @@
-[2026-06-30 16:57:32]  Training started
-[2026-06-30 16:57:32]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/train_config.json
-[2026-06-30 16:57:32]  Run tag    : SPARE_AD_v1.0
-[2026-06-30 16:57:32]  SPARE type : AD  |  model: SPARE_AD v1.0
-[2026-06-30 16:57:32]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0
-[2026-06-30 16:57:32]  Prep       : raw_data.csv → prepped.csv
-[2026-06-30 16:57:32]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0/prepped.csv
-[2026-06-30 16:57:32]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=True
-[2026-06-30 16:57:32]  Training started
-[2026-06-30 16:57:34]  Training complete (elapsed: 0:00:02)
-[2026-06-30 16:57:34]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0/model/SPARE_AD_v1.0.joblib
-[2026-06-30 16:57:34]  Metrics    : metrics.json
-[2026-06-30 16:57:34]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0
+[2026-06-30 17:24:01]  Training started
+[2026-06-30 17:24:01]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/train_config.json
+[2026-06-30 17:24:01]  Run tag    : SPARE_AD_v1.0
+[2026-06-30 17:24:01]  SPARE type : AD  |  model: SPARE_AD v1.0
+[2026-06-30 17:24:01]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0
+[2026-06-30 17:24:01]  Prep       : raw_data.csv → prepped.csv
+[2026-06-30 17:24:01]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0/prepped.csv
+[2026-06-30 17:24:01]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=True
+[2026-06-30 17:24:01]  Training started
+[2026-06-30 17:24:04]  Training complete (elapsed: 0:00:03)
+[2026-06-30 17:24:04]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0/model/SPARE_AD_v1.0.joblib
+[2026-06-30 17:24:04]  Metrics    : metrics.json
+[2026-06-30 17:24:04]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_AD/training/input/../output/SPARE_AD_v1.0

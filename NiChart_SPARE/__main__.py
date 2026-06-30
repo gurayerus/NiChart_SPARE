@@ -124,6 +124,8 @@ def _run_train(args):
     desc      = cfg.get('description', {})
     inp       = cfg.get('input', {})
     out_cfg   = cfg.get('output', {})
+    pre_proc  = cfg.get('pre-processing') or {}
+    post_proc = cfg.get('post-processing') or {}
     model_cfg = cfg.get('model', {})
 
     # Validate required fields
@@ -143,20 +145,21 @@ def _run_train(args):
     # Input section
     in_dir        = str(inp.get('in_dir', '.'))
     in_csv        = str(inp['in_csv'])
-    columns       = inp.get('in_cols') or None   # list of patterns; trailing '*' = prefix wildcard
-    key_variable  = str(inp.get('key_col', 'MRID'))
-    target_column = inp.get('target_col')
-    ignore_columns = str(inp.get('ignore_cols', ''))
-    icv_correction = bool(inp.get('icv_correction', False))
-    icv_column    = str(inp.get('icv_col', 'DL_MUSE_Volume_702'))
-    age_col       = str(inp.get('age_col', 'Age'))
-    sex_col       = str(inp.get('sex_col', 'Sex'))
+    key_col       = str(inp.get('key_col', 'MRID'))
+    target_col    = inp.get('target_col')
+    data_cols     = inp.get('data_cols') or None   # feature column patterns; trailing '*' = prefix wildcard
+    mappings      = inp.get('mappings') or None
 
     # Output section
     out_dir       = str(out_cfg['out_dir'])
     out_csv       = str(out_cfg.get('out_csv', 'predictions.csv'))
     out_cols      = out_cfg.get('out_cols') or None
     out_model_dir = str(out_cfg.get('out_model_dir', ''))
+
+    # If post-processing declares age bias correction, enable it for training
+    bias_correction = int(model_cfg.get('bias_correction', 0))
+    if 'age-bias-corr' in post_proc:
+        bias_correction = 1
 
     input_file    = os.path.join(config_dir, in_dir, in_csv)
     output_folder = os.path.join(config_dir, out_dir)
@@ -225,40 +228,32 @@ def _run_train(args):
         _log(f"Prep       : {in_csv} → prepped.csv", log_fh)
         raw_file   = input_file
         input_file = os.path.join(run_dir, 'prepped.csv')
-        ignore = [c.strip() for c in ignore_columns.split(',') if c.strip()]
         _, cvm_mean_age = prep_data(
             input_file=raw_file,
-            spare_type=spare_type,
-            key_variable=key_variable,
-            target_column=target_column,
-            columns=columns,
-            ignore_columns=ignore or None,
+            key_col=key_col,
+            target_col=target_col,
+            data_cols=data_cols,
+            mappings=mappings,
+            preprocessing=pre_proc or None,
             output_file=input_file,
-            icv_correction=icv_correction,
-            icv_column=icv_column,
-            age_col=age_col,
-            sex_col=sex_col,
         )
         _log(f"Prep done  : {input_file}", log_fh)
 
-        # Prep config saved into the model for automatic application at inference time
+        # Prep config saved into the model for automatic replay at inference time
         prep_config = {
-            'spare_type':     spare_type,
-            'key_variable':   key_variable,
-            'target_column':  target_column,
-            'columns':        columns,
-            'ignore_columns': ignore or None,
-            'icv_correction': icv_correction,
-            'icv_column':     icv_column,
-            'age_col':        age_col,
-            'sex_col':        sex_col,
-            'cvm_mean_age':   cvm_mean_age,   # None for non-CVM types
+            'key_col':       key_col,
+            'target_col':    target_col,
+            'data_cols':     data_cols,
+            'mappings':      mappings,
+            'preprocessing': pre_proc or None,
+            'cvm_mean_age':  cvm_mean_age,   # None when no residualization
         }
 
-        # Output config saved into the model so inference can use the right filename/columns
+        # Output config: filename/column filter + post-processing steps for inference
         output_config = {
-            'out_csv':  out_csv,
-            'out_cols': out_cols,
+            'out_csv':         out_csv,
+            'out_cols':        out_cols,
+            'post_processing': post_proc or None,
         }
 
         # Model lives in out_model_dir subdir within run_dir (if specified)

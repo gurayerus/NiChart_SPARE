@@ -1,8 +1,8 @@
 {
   "run_tag": "SPARE_BA_v1.0",
-  "timestamp": "2026-06-30T16:57:48.257399",
+  "timestamp": "2026-06-30T17:24:07.241614",
   "model_tag": "SPARE_BA",
   "model_version": "1.0",
-  "git_commit": "3701a8843cc7378b0142fb4949dd41307b494873",
+  "git_commit": "52e577bdba1d89b9c225b9b86ba87fc63accdc9f",
   "notes": ""
 }

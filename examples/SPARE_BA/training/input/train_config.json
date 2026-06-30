@@ -9,12 +9,12 @@
   "input": {
     "in_dir": ".",
     "in_csv": "raw_data.csv",
-    "in_cols": ["MRID", "Age", "Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"],
     "key_col": "MRID",
     "target_col": "Age",
-    "age_col": "Age",
-    "sex_col": "Sex"
+    "data_cols": ["Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"]
   },
+
+  "pre-processing": {},
 
   "model": {
     "svm_kernel": "linear",
@@ -22,8 +22,11 @@
     "train_whole": true,
     "cv_fold": 5,
     "class_balancing": false,
-    "bias_correction": 1,
     "verbose": 1
+  },
+
+  "post-processing": {
+    "age-bias-corr": {}
   },
 
   "output": {

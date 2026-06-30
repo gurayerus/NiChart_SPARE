@@ -65,9 +65,9 @@ def infer_model(
     target_col  = meta_data['training_data_description']['target_column']
     feature_names = meta_data['training_data_description']['feature_names']
 
-    # Use key_variable from stored prep config when available
-    if prep_config and prep_config.get('key_variable'):
-        key_variable = prep_config['key_variable']
+    # Use key_col from stored prep config when available
+    if prep_config and prep_config.get('key_col'):
+        key_variable = prep_config['key_col']
 
     # --- Auto-apply prep when the model stores a prep config ---
     if prep_config:
@@ -77,16 +77,12 @@ def infer_model(
         prepped_path = _os.path.join(output_dir, 'prepped.csv')
         prep_data(
             input_file=input_file,
-            spare_type=prep_config['spare_type'],
-            key_variable=key_variable,
-            target_column=prep_config.get('target_column'),
-            columns=prep_config.get('columns'),
-            ignore_columns=prep_config.get('ignore_columns') or None,
+            key_col=prep_config.get('key_col', 'MRID'),
+            target_col=prep_config.get('target_col'),
+            data_cols=prep_config.get('data_cols'),
+            mappings=prep_config.get('mappings'),
+            preprocessing=prep_config.get('preprocessing'),
             output_file=prepped_path,
-            icv_correction=prep_config.get('icv_correction', False),
-            icv_column=prep_config.get('icv_column', 'DL_MUSE_Volume_702'),
-            age_col=prep_config.get('age_col', 'Age'),
-            sex_col=prep_config.get('sex_col', 'Sex'),
             cvm_mean_age=prep_config.get('cvm_mean_age'),
         )
         input_file = prepped_path

@@ -9,11 +9,17 @@
   "input": {
     "in_dir": ".",
     "in_csv": "raw_data.csv",
-    "in_cols": ["MRID", "disease", "Age", "Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"],
     "key_col": "MRID",
     "target_col": "disease",
-    "age_col": "Age",
-    "sex_col": "Sex"
+    "data_cols": ["Age", "Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"]
+  },
+
+  "pre-processing": {
+    "residualization": {
+      "age_col": "Age",
+      "sex_col": "Sex_M",
+      "icv_col": "DL_MUSE_Volume_702"
+    }
   },
 
   "model": {
@@ -22,9 +28,10 @@
     "train_whole": true,
     "cv_fold": 5,
     "class_balancing": true,
-    "bias_correction": 0,
     "verbose": 1
   },
+
+  "post-processing": {},
 
   "output": {
     "out_dir": "../output",
