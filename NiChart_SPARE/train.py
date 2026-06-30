@@ -59,8 +59,8 @@ def train_model(
     model_path : str
         Destination path for the saved model (.joblib).
     spare_type : str
-        SPARE task type (CL, AD, CVM, HT, T2B, SM, BMI → classification;
-        RG, BA → regression).  Stored in model metadata.
+        SPARE task type (CL, AD, CVM, HT, T2B, SM, BMI -> classification;
+        RG, BA -> regression).  Stored in model metadata.
     kernel : str
         SVM kernel: linear_fast, linear, rbf, poly, sigmoid.
     tune_hyperparameters : bool

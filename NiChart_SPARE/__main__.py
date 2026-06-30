@@ -3,9 +3,9 @@
 NiChart_SPARE CLI
 
 Two-stage workflow:
-  train  — SVM training driven by a JSON config → experiment directory with model + metadata
+  train  — SVM training driven by a JSON config -> experiment directory with model + metadata
            (data prep is performed automatically and saved alongside the model)
-  test   — model inference on raw CSV → output directory with prepped.csv + predictions.csv
+  test   — model inference on raw CSV -> output directory with prepped.csv + predictions.csv
            (prep is applied automatically using parameters stored inside the model)
 """
 import argparse
@@ -56,7 +56,7 @@ def _build_test_parser(sub):
                    help='Model version to use with --task (default: task\'s default version)')
 
     p.add_argument('--append_spare_tag', default='',
-                   help='Rename SPARE_<type> → SPARE_<tag> in output column')
+                   help='Rename SPARE_<type> -> SPARE_<tag> in output column')
     return p
 
 
@@ -225,7 +225,7 @@ def _run_train(args):
 
         # Prep step — always runs; saves prepped.csv alongside the model
         from .prep_data import prep_data
-        _log(f"Prep       : {in_csv} → prepped.csv", log_fh)
+        _log(f"Prep       : {in_csv} -> prepped.csv", log_fh)
         raw_file   = input_file
         input_file = os.path.join(run_dir, 'prepped.csv')
         _, cvm_mean_age = prep_data(

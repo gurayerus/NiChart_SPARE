@@ -44,7 +44,7 @@ def infer_model(
     key_variable : str
         Column that uniquely identifies each sample (default: MRID).
     append_spare_tag : str
-        When non-empty, rename SPARE_<type> → SPARE_<tag> in output.
+        When non-empty, rename SPARE_<type> -> SPARE_<tag> in output.
 
     Returns
     -------
