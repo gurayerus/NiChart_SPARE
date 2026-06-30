@@ -1,17 +1,13 @@
-# Use Python 3.8 as the base image
 FROM python:3.12
 
-# Upgrade pip
 RUN pip install --upgrade pip
 
-# Copy the requirements file to the working directory
 WORKDIR /spare_score
 COPY ./ ./
 RUN pip install -e .
-#RUN cd / && \
-#    git clone https://github.com/CBICA/spare_score && \
-#    cd /spare_score && pip install . 
 
-# Set the command to run the Python script
-#CMD ["python", "merge_ROI_demo_and_test.py"]
-ENTRYPOINT ["python3", "/spare_score/scripts/wrapper.py", "-a", "inference"]
+# Download all registered default-version models into the HF cache at build time
+# so the image works without internet access at runtime.
+RUN python -c "from NiChart_SPARE.task_registry import download_all_default_models; download_all_default_models()"
+
+ENTRYPOINT ["NiChart_SPARE"]

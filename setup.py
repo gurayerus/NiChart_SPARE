@@ -55,7 +55,9 @@ setup(
         "scikit-learn>=1.0.0",
         "scipy>=1.7.0",
         "matplotlib",
-        "seaborn"
+        "seaborn",
+        "pyyaml>=5.1",
+        "huggingface_hub>=0.20.0",
     ],
     extras_require={
         "dev": [

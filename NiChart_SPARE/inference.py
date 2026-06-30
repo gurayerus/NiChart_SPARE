@@ -27,7 +27,7 @@ REGRESSION_TYPES = frozenset({'RG', 'BA'})
 def infer_model(
     input_file: str,
     model_path: str,
-    output_file: str,
+    output_dir: str,
     key_variable: str = 'MRID',
     append_spare_tag: str = '',
 ) -> pd.DataFrame:
@@ -42,8 +42,9 @@ def infer_model(
         May optionally contain the target column (for evaluation output).
     model_path : str
         Path to a .joblib model file produced by train.train_model().
-    output_file : str
-        Destination path for the predictions CSV.
+    output_dir : str
+        Directory where predictions.csv (and any other outputs) are written.
+        Created automatically if it does not exist.
     key_variable : str
         Column that uniquely identifies each sample (default: MRID).
     append_spare_tag : str
@@ -52,7 +53,7 @@ def infer_model(
     Returns
     -------
     pd.DataFrame
-        Predictions DataFrame (also written to output_file).
+        Predictions DataFrame (also written to output_dir/predictions.csv).
     """
     # --- Load model ---
     model_data   = joblib.load(model_path)
@@ -123,6 +124,9 @@ def infer_model(
     if has_target and y is not None:
         out[f"GT_{spare_type}"] = y.values
 
+    import os
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, 'predictions.csv')
     out.to_csv(output_file, index=False)
     print(f"Predictions saved to: {output_file}")
 

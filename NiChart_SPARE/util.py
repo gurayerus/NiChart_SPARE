@@ -27,6 +27,7 @@ def get_pipeline_module(spare_type: str):
 def get_metadata(
     spare_type, package_version, model_type, kernel, target_column,
     df, tune_hyperparameters, cv_fold, class_balancing, train_whole_set,
+    model_tag=None, model_version=None,
 ) -> dict:
     return {
         'spare_type': spare_type,
@@ -34,6 +35,8 @@ def get_metadata(
         'model_description': {
             'model_type': model_type,
             'kernel': kernel,
+            'model_tag': model_tag,
+            'model_version': model_version,
         },
         'training_data_description': {
             'target_column': target_column,

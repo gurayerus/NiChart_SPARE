@@ -1,0 +1,29 @@
+{
+  "description": {
+    "spare_type": "AD",
+    "model_tag": "SPARE_AD",
+    "model_version": "1.0",
+    "run_tag": "SPARE_AD_v1.0"
+  },
+
+  "data": {
+    "input": "../data/raw_train.csv",
+    "output": "../models"
+  },
+
+  "variables": {
+    "key_variable": "MRID",
+    "target_column": "disease",
+    "ignore_columns": "Study,SITE"
+  },
+
+  "model": {
+    "svm_kernel": "linear",
+    "hyperparameter_tuning": true,
+    "train_whole": true,
+    "cv_fold": 5,
+    "class_balancing": true,
+    "bias_correction": 0,
+    "verbose": 1
+  }
+}

@@ -1,0 +1,147 @@
+# NiChart_SPARE Task Registry
+#
+# Maps short task names to model files, versions, and Hugging Face repos.
+# Replace placeholder hf_repo values with actual repos once models are uploaded.
+#
+# Keys:
+#   description     - Human-readable label
+#   spare_type      - SPARE type code used internally (CL/RG/AD/BA/CVM/HT/SM/BMI)
+#   default_version - Version selected when --version is omitted
+#   versions        - Map of version key -> model file info
+#     hf_repo       - Hugging Face repository (org/repo-name)
+#     hf_revision   - Branch/tag in the HF repo (default: main)
+#     filename      - Filename of the .joblib model file in the HF repo
+
+AD:
+  description: "SPARE-AD: Alzheimer's Disease atrophy pattern"
+  spare_type: AD
+  default_version: v3.0
+  versions:
+    v3.0:
+      hf_repo: "cbica/NiChart-SPARE-AD-v3.0"
+      hf_revision: "main"
+      filename: "SPARE-AD-Harmonized-ISTAGING_3_0.joblib"
+    v3.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-AD-RAW-v3.0"
+      hf_revision: "main"
+      filename: "SPARE-AD-RAW-ISTAGING_3_0.joblib"
+
+BA:
+  description: "SPARE-BA: Brain Age"
+  spare_type: BA
+  default_version: v3.0
+  versions:
+    v3.0:
+      hf_repo: "cbica/NiChart-SPARE-BA-v3.0"
+      hf_revision: "main"
+      filename: "SPARE-BA-Harmonized-ISTAGING_3_0.joblib"
+    v3.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-BA-RAW-v3.0"
+      hf_revision: "main"
+      filename: "SPARE-BA-RAW-ISTAGING_3_0.joblib"
+
+BMI:
+  description: "SPARE-BMI: Body Mass Index pattern"
+  spare_type: BMI
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-BMI-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-BMI-Harmonized-linear-HT-CB.joblib"
+    v1.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-BMI-RAW-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-BMI-RAW-linear-HT-CB.joblib"
+
+DIABETES:
+  description: "SPARE-DIABETES: Type 2 Diabetes pattern"
+  spare_type: CL
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-DIABETES-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-DIABETES-Harmonized-linear-HT-CB.joblib"
+    v1.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-DIABETES-RAW-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-DIABETES-RAW-linear-HT-CB.joblib"
+
+HYPERTENSION:
+  description: "SPARE-HYPERTENSION: Hypertension pattern"
+  spare_type: HT
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-HYPERTENSION-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-HYPERTENSION-Harmonized-linear-HT-CB.joblib"
+    v1.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-HYPERTENSION-RAW-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-HYPERTENSION-RAW-linear-HT-CB.joblib"
+
+SMOKING:
+  description: "SPARE-SMOKING: Smoking pattern"
+  spare_type: SM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-SMOKING-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-SMOKING-Harmonized-linear-HT-CB.joblib"
+    v1.0-raw:
+      hf_repo: "cbica/NiChart-SPARE-SMOKING-RAW-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-SMOKING-RAW-linear-HT-CB.joblib"
+
+CVM-HYPERLIPIDEMIA:
+  description: "SPARE-CVM: Hyperlipidemia (includes white matter lesion volumes)"
+  spare_type: CVM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-CVM-HYPERLIPIDEMIA-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-CVM-HYPERLIPIDEMIA-Harmonized.joblib"
+
+CVM-HYPERTENSION:
+  description: "SPARE-CVM: Hypertension (includes white matter lesion volumes)"
+  spare_type: CVM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-CVM-HYPERTENSION-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-CVM-HYPERTENSION-Harmonized.joblib"
+
+CVM-OBESITY:
+  description: "SPARE-CVM: Obesity (includes white matter lesion volumes)"
+  spare_type: CVM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-CVM-OBESITY-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-CVM-OBESITY-Harmonized.joblib"
+
+CVM-SMOKING:
+  description: "SPARE-CVM: Smoking (includes white matter lesion volumes)"
+  spare_type: CVM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-CVM-SMOKING-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-CVM-SMOKING-Harmonized.joblib"
+
+CVM-T2D:
+  description: "SPARE-CVM: Type 2 Diabetes (includes white matter lesion volumes)"
+  spare_type: CVM
+  default_version: v1.0
+  versions:
+    v1.0:
+      hf_repo: "cbica/NiChart-SPARE-CVM-T2D-v1.0"
+      hf_revision: "main"
+      filename: "SPARE-CVM-T2D-Harmonized.joblib"

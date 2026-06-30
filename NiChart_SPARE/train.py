@@ -42,7 +42,9 @@ def train_model(
     train_whole_set: bool = True,
     bias_correction: int = 0,
     verbose: int = 1,
-) -> None:
+    model_tag: str = '',
+    model_version: str = '',
+) -> dict:
     """
     Train an SVM model on a prepared input CSV and save it to disk.
 
@@ -138,6 +140,8 @@ def train_model(
     meta_data   = get_metadata(
         spare_type, VERSION, 'SVM', kernel, target_column,
         df, tune_hyperparameters, cv_fold, class_balancing, train_whole_set,
+        model_tag=model_tag or None,
+        model_version=model_version or None,
     )
     preprocessor = get_preprocessors(feature_encoder, feature_scaler)
 
@@ -152,3 +156,4 @@ def train_model(
         model_path,
     )
     print(f"Model saved to: {model_path}")
+    return cv
