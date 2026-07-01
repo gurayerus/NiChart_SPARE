@@ -1,0 +1,10 @@
+NiChart_SPARE.egg-info/
+commands.sh
+__pycache__/
+*/__pycache__/
+Data/
+Output/
+output/
+notebooks/
+*.ipynb
+legacy/

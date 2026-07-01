@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include setup.py
+include setup.cfg
+include MANIFEST.in
+recursive-include NiChart_SPARE *.py
+recursive-include NiChart_SPARE *.csv
+recursive-include NiChart_SPARE *.yaml
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co] 

@@ -1,0 +1,41 @@
+{
+  "description": {
+    "spare_type": "AD",
+    "model_tag": "SPARE_AD",
+    "model_version": "1.0",
+    "run_tag": "SPARE_AD_v1.0"
+  },
+
+  "input": {
+    "in_dir": ".",
+    "in_csv": "raw_data.csv",
+    "key_col": "MRID",
+    "target_col": "disease",
+    "data_cols": ["Age", "Sex", "DL_MUSE_Volume_*"],
+    "mappings": {
+      "Sex": {"M": 0, "F": 1}
+    }
+  },
+
+  "pre-processing": {},
+
+  "model": {
+    "svm_type": "classification",
+    "svm_kernel": "linear",
+    "hyperparameter_tuning": true,
+    "train_whole": true,
+    "cv_fold": 5,
+    "class_balancing": true,
+    "verbose": 1
+  },
+
+  "post-processing": {},
+
+  "output": {
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
+    "out_cols": ["MRID", "SPARE_AD"],
+    "out_model_dir": "model" 
+  }
+
+}
