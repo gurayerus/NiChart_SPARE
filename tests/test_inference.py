@@ -44,14 +44,6 @@ class TestOutputFile:
         assert len(df) == input_rows
 
 
-class TestAppendSpareTag:
-    def test_custom_tag_used(self, cl_model, prepped_cl_csv, tmp_path):
-        df = infer_model(prepped_cl_csv, cl_model, str(tmp_path / 'out'),
-                         append_spare_tag='MyBiomarker')
-        assert 'SPARE_MyBiomarker' in df.columns
-        assert 'SPARE_CL' not in df.columns
-
-
 class TestValidation:
     def test_missing_feature_raises(self, cl_model, tmp_path):
         import pandas as pd, numpy as np

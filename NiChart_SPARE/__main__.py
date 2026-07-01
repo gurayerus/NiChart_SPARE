@@ -55,8 +55,6 @@ def _build_test_parser(sub):
     p.add_argument('--version', default=None,
                    help='Model version to use with --task (default: task\'s default version)')
 
-    p.add_argument('--append_spare_tag', default='',
-                   help='Rename SPARE_<type> -> SPARE_<tag> in output column')
     return p
 
 
@@ -132,7 +130,7 @@ def _run_train(args):
     for section, key in [
         ('description', 'spare_type'), ('description', 'model_tag'),
         ('description', 'run_tag'), ('input', 'in_csv'), ('output', 'out_dir'),
-        ('input', 'target_col'),
+        ('input', 'target_col'), ('model', 'svm_type'),
     ]:
         if not cfg.get(section, {}).get(key):
             raise ValueError(f"Config missing required field: '{section}.{key}'")
@@ -156,20 +154,16 @@ def _run_train(args):
     out_cols      = out_cfg.get('out_cols') or None
     out_model_dir = str(out_cfg.get('out_model_dir', ''))
 
-    # If post-processing declares age bias correction, enable it for training
-    bias_correction = int(model_cfg.get('bias_correction', 0))
-    if 'age-bias-corr' in post_proc:
-        bias_correction = 1
-
     input_file    = os.path.join(config_dir, in_dir, in_csv)
     output_folder = os.path.join(config_dir, out_dir)
 
+    svm_type              = str(model_cfg['svm_type'])
     svm_kernel            = str(model_cfg.get('svm_kernel', 'linear'))
     hyperparameter_tuning = bool(model_cfg.get('hyperparameter_tuning', True))
     train_whole           = bool(model_cfg.get('train_whole', True))
     cv_fold               = int(model_cfg.get('cv_fold', 5))
     class_balancing       = bool(model_cfg.get('class_balancing', True))
-    bias_correction       = int(model_cfg.get('bias_correction', 0))
+    age_bias_correction   = int(model_cfg.get('age_bias_correction', 0))
     verbose               = int(model_cfg.get('verbose', 1))
 
     # run_tag determines the output directory — fail early if it already exists
@@ -273,13 +267,14 @@ def _run_train(args):
             input_file=input_file,
             model_path=model_path,
             spare_type=spare_type,
+            svm_type=svm_type,
             kernel=svm_kernel,
             tune_hyperparameters=hyperparameter_tuning,
             cv_fold=cv_fold,
             class_balancing=class_balancing,
             cross_validate=cv_fold != 0,
             train_whole_set=train_whole,
-            bias_correction=bias_correction,
+            bias_correction=age_bias_correction,
             verbose=verbose,
             model_tag=model_tag,
             model_version=model_version,
@@ -354,7 +349,6 @@ def _run_test(args):
         input_file=args.input,
         model_path=model_path,
         output_dir=args.output_dir,
-        append_spare_tag=args.append_spare_tag,
     )
 
 

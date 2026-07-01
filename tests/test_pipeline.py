@@ -23,7 +23,7 @@ class TestCLPipeline:
 
         prep_data(raw_cl_csv, key_col='MRID', target_col='DX',
                   data_cols=['DL_MUSE_Volume_*'], output_file=prepped)
-        train_model(prepped, model, 'CL', **TRAIN_KWARGS)
+        train_model(prepped, model, 'CL', svm_type='classification', **TRAIN_KWARGS)
         df = infer_model(prepped, model, out_dir)
 
         assert len(df) == N
@@ -39,7 +39,7 @@ class TestCLPipeline:
 
         prep_data(raw_cl_csv, key_col='MRID', target_col='DX',
                   data_cols=['DL_MUSE_Volume_*'], output_file=prepped_train)
-        train_model(prepped_train, model, 'CL', **TRAIN_KWARGS)
+        train_model(prepped_train, model, 'CL', svm_type='classification', **TRAIN_KWARGS)
 
         # Test CSV: no target column — data_cols doesn't include DX, target_col=None
         prep_data(raw_cl_csv, key_col='MRID', target_col=None,
@@ -58,7 +58,7 @@ class TestRGPipeline:
 
         prep_data(raw_rg_csv, key_col='MRID', target_col='Age',
                   data_cols=['DL_MUSE_Volume_*'], output_file=prepped)
-        train_model(prepped, model, 'RG', **TRAIN_KWARGS)
+        train_model(prepped, model, 'RG', svm_type='regression', **TRAIN_KWARGS)
         df = infer_model(prepped, model, out_dir)
 
         assert len(df) == N
@@ -82,7 +82,7 @@ class TestCVMPipeline:
         assert 'Sex' not in prepped_df.columns
         assert 'DL_MUSE_Volume_702' not in prepped_df.columns
 
-        train_model(prepped, model, 'CVM', **TRAIN_KWARGS)
+        train_model(prepped, model, 'CVM', svm_type='classification', **TRAIN_KWARGS)
         df = infer_model(prepped, model, out_dir)
 
         assert len(df) == N

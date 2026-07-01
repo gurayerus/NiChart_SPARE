@@ -2,16 +2,6 @@
 
 Training and inference of SPARE (Spatial Patterns of Abnormality for Recognition of Early X) biomarker scores from brain ROI volumes ([NiChart_DLMUSE](https://github.com/CBICA/NiChart_DLMUSE)) and white matter lesion volumes ([NiChart_DLWMLS](https://github.com/CBICA/NiChart_DLWMLS)).
 
-## Supported SPARE types
-
-| Type | Task | Notes |
-|---|---|---|
-| `CL` | Classification | Generic binary/multi-class classifier |
-| `RG` | Regression | Generic continuous target |
-| `AD` | Classification | Alzheimer's disease |
-| `BA` | Regression | Brain age |
-| `CVM`, `HT`, `T2B`, `SM`, `BMI` | Classification | Cardiovascular & metabolic disease scores; Age/Sex/ICV confounds removed automatically during prep |
-
 ## Installation
 
 ```bash
@@ -31,6 +21,19 @@ To also install development dependencies (pytest, flake8, etc.):
 pip install -e ".[dev]"
 ```
 
+---
+
+## Workflow overview
+
+```
+NiChart_SPARE train -c train_config.json   # prep + train → model + metrics
+NiChart_SPARE test  -m model.joblib -i raw.csv -o results/   # prep + inference → predictions
+```
+
+Preprocessing (column selection, value remapping, confound residualization) is configured in the JSON file and replayed automatically at inference time using parameters stored inside the model file.
+
+---
+
 ## Quick usage — pre-trained models
 
 Models are hosted on Hugging Face and downloaded automatically on first use (cached in `~/.cache/huggingface`).
@@ -40,18 +43,16 @@ Models are hosted on Hugging Face and downloaded automatically on first use (cac
 NiChart_SPARE test --list-tasks
 
 # Run inference using a registered task (model downloads automatically)
-NiChart_SPARE test -t AD -i prepped.csv -o ./results/
+NiChart_SPARE test -t AD -i raw.csv -o ./results/
 
-# Use a specific version
-NiChart_SPARE test -t AD --version v3.0-raw -i prepped.csv -o ./results/
+# Use a specific model version
+NiChart_SPARE test -t AD --version v3.0-raw -i raw.csv -o ./results/
 
-# Use an explicit local model file instead of the registry
-NiChart_SPARE test -m /path/to/model.joblib -i prepped.csv -o ./results/
+# Use an explicit local model file
+NiChart_SPARE test -m /path/to/model.joblib -i raw.csv -o ./results/
 ```
 
-Output is written to `./results/predictions.csv`.
-
-## Advanced usage — inference options
+Output is written to `./results/` (filename controlled by the model's stored config, default: `predictions.csv`). A `prepped.csv` is also saved there showing the data as it was fed to the model.
 
 ### Show model info and download URL
 
@@ -59,17 +60,9 @@ Output is written to `./results/predictions.csv`.
 NiChart_SPARE test -t AD --model-info
 ```
 
-Prints the Hugging Face repo, revision, direct download URL, and a manual invocation example.
-
-### Listing available tasks
-
-```bash
-NiChart_SPARE test --list-tasks
-```
+---
 
 ## Offline / firewall-restricted environments
-
-If the automatic download fails (e.g., firewall, air-gapped HPC):
 
 1. Find the download URL:
    ```bash
@@ -81,161 +74,223 @@ If the automatic download fails (e.g., firewall, air-gapped HPC):
    wget <URL printed by --model-info>
    ```
 
-3. Transfer the `.joblib` file to your target machine.
-
-4. Run inference pointing directly at the local file:
+3. Transfer the `.joblib` file to your target machine and run inference directly:
    ```bash
-   NiChart_SPARE test -m /path/to/SPARE-AD-Harmonized-ISTAGING_3_0.joblib \
-       -i prepped.csv -o ./results/
+   NiChart_SPARE test -m /path/to/SPARE-AD.joblib -i raw.csv -o ./results/
    ```
 
-## Full workflow — prepare → train → test
+---
 
-Prep, train, and test can each be run as separate explicit steps, or prep can be embedded
-directly inside the train and test commands for a simpler one-step invocation.
+## Training a custom model
 
-### Option A — Explicit three-step workflow
+### 1. Prepare a training config (JSON)
 
-#### Step 1 — Prepare data
+All training options live in a single JSON file. Example for SPARE-AD (classification):
+
+```json
+{
+  "description": {
+    "spare_type": "AD",
+    "model_tag": "SPARE_AD",
+    "model_version": "1.0",
+    "run_tag": "SPARE_AD_v1.0"
+  },
+
+  "input": {
+    "in_dir": ".",
+    "in_csv": "raw_data.csv",
+    "key_col": "MRID",
+    "target_col": "disease",
+    "data_cols": ["Age", "Sex", "DL_MUSE_Volume_*"],
+    "mappings": {
+      "Sex": {"M": 0, "F": 1}
+    }
+  },
+
+  "pre-processing": {},
+
+  "model": {
+    "svm_type": "classification",
+    "svm_kernel": "linear",
+    "hyperparameter_tuning": true,
+    "train_whole": true,
+    "cv_fold": 5,
+    "class_balancing": true,
+    "age_bias_correction": 0,
+    "verbose": 1
+  },
+
+  "post-processing": {},
+
+  "output": {
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
+    "out_cols": ["MRID", "SPARE_AD"],
+    "out_model_dir": "model"
+  }
+}
+```
+
+Example for SPARE-BA (regression with age-bias correction):
+
+```json
+{
+  "description": {
+    "spare_type": "BA",
+    "model_tag": "SPARE_BA",
+    "model_version": "1.0",
+    "run_tag": "SPARE_BA_v1.0"
+  },
+
+  "input": {
+    "in_dir": ".",
+    "in_csv": "raw_data.csv",
+    "key_col": "MRID",
+    "target_col": "Age",
+    "data_cols": ["Sex_M", "DL_MUSE_Volume_702", "H_DL_MUSE_Volume_*"]
+  },
+
+  "pre-processing": {},
+
+  "model": {
+    "svm_type": "regression",
+    "svm_kernel": "linear",
+    "hyperparameter_tuning": true,
+    "train_whole": true,
+    "cv_fold": 5,
+    "class_balancing": false,
+    "age_bias_correction": 1,
+    "verbose": 1
+  },
+
+  "post-processing": {},
+
+  "output": {
+    "out_dir": "../output",
+    "out_csv": "pred_train.csv",
+    "out_cols": ["MRID", "SPARE_BA"],
+    "out_model_dir": "model"
+  }
+}
+```
+
+Example with confound residualization in `pre-processing` (e.g. SPARE-DIABETES):
+
+```json
+{
+  "pre-processing": {
+    "residualization": {
+      "age_col": "Age",
+      "sex_col": "Sex_M",
+      "icv_col": "DL_MUSE_Volume_702"
+    }
+  }
+}
+```
+
+When `residualization` is specified, the listed columns must appear in `data_cols`; they are consumed by the residualization step and dropped from the feature set before training.
+
+### 2. Run training
 
 ```bash
-# Classification (e.g. AD diagnosis)
-NiChart_SPARE prep \
-    -t CL \
-    -i raw_input.csv \
-    -o prepped.csv \
-    -tc DX \
-    -ic Study,SITE,Sex \
-    -kv MRID
-
-# CVM types — Age, Sex, and ICV effects are removed automatically
-NiChart_SPARE prep \
-    -t CVM \
-    -i raw_input.csv \
-    -o prepped.csv \
-    -tc Disease \
-    -ic Study,SITE \
-    -kv MRID
-
-# Regression (e.g. brain age)
-NiChart_SPARE prep \
-    -t RG \
-    -i raw_input.csv \
-    -o prepped.csv \
-    -tc Age \
-    -ic Study,SITE,Sex \
-    -kv MRID
+NiChart_SPARE train -c path/to/train_config.json
 ```
 
-Key options for `prep`:
-
-| Flag | Description |
-|---|---|
-| `-t` | SPARE type (determines preprocessing applied) |
-| `-tc` | Target column name; omit when preparing inference-only data |
-| `-ic` | Comma-separated columns to drop (e.g. `Study,SITE,Sex`) |
-| `-icv True` | Divide all MUSE ROI volumes by ICV before any other step |
-| `--age_col`, `--sex_col` | Column names for Age and Sex (CVM types only, defaults: `Age`, `Sex`) |
-
-#### Step 2 — Train
+Add `-n` to attach a free-text note to the run:
 
 ```bash
-NiChart_SPARE train -c configs/train_ad.yaml
+NiChart_SPARE train -c train_config.json -n "baseline linear kernel"
 ```
 
-**Minimal config** (`configs/train_ad.yaml`) — assumes `input_csv` is already prepped:
+Output directory (`out_dir/run_tag/`):
 
-```yaml
-input_csv: ../data/prepped_train.csv   # already-prepped CSV
-output_folder: ../models
-model_tag: SPARE_AD
-model_version: "1.0"
-
-spare_type: AD
-svm_kernel: linear
-hyperparameter_tuning: true
-cv_fold: 5
-class_balancing: true
+```
+output/SPARE_AD_v1.0/
+  config.json         ← copy of the config used
+  meta.json           ← timestamp, git commit, notes
+  prepped.csv         ← preprocessed training data
+  train.log           ← timestamped log
+  metrics.json        ← per-fold CV scores
+  model/
+    SPARE_AD_v1.0.joblib
 ```
 
-#### Step 3 — Test (inference)
+### 3. Run inference on new data
 
 ```bash
 NiChart_SPARE test \
-    -m models/experiments/.../SPARE_AD_v1.0.joblib \
-    -i data/prepped_test.csv \
+    -m output/SPARE_AD_v1.0/model/SPARE_AD_v1.0.joblib \
+    -i new_subjects.csv \
     -o results/
+```
+
+The prep config stored inside the model is replayed automatically on `new_subjects.csv`. Output:
+
+```
+results/
+  prepped.csv         ← data as fed to the model
+  pred_train.csv      ← predictions (filename set by out_csv in training config)
 ```
 
 ---
 
-### Option B — Inline prep (raw data → model / predictions in one command)
+## Config reference
 
-#### Training with inline prep
+### `description`
 
-Add `target_column` (and any other prep fields) to the config. Prep runs automatically
-and `prepped.csv` is saved alongside the model in the experiment directory.
+| Field | Required | Description |
+|---|---|---|
+| `spare_type` | yes | Label used for the output score column (`SPARE_<spare_type>`) |
+| `model_tag` | yes | Human-readable model name |
+| `model_version` | no | Version string (default: `"1.0"`) |
+| `run_tag` | yes | Output directory name; must be unique per run |
 
-```yaml
-input_csv: ../data/raw_train.csv      # raw CSV
-output_folder: ../models
-model_tag: SPARE_AD
-model_version: "1.0"
+### `input`
 
-spare_type: AD
+| Field | Required | Description |
+|---|---|---|
+| `in_csv` | yes | Input CSV filename |
+| `in_dir` | no | Directory containing `in_csv`, relative to the config file (default: `.`) |
+| `key_col` | no | Unique ID column (default: `MRID`) |
+| `target_col` | yes | Column to predict |
+| `data_cols` | no | Feature column patterns; trailing `*` matches by prefix (e.g. `"DL_MUSE_Volume_*"`). Columns for preprocessing steps must be included here. |
+| `mappings` | no | Value remapping applied before preprocessing, e.g. `{"Sex": {"M": 0, "F": 1}}` |
 
-# Inline prep — runs automatically because target_column is specified
-target_column: DX
-ignore_columns: Study,SITE,Sex
-# icv_correction: false
-# age_col: Age                        # CVM residualization only
-# sex_col: Sex
+### `pre-processing`
 
-svm_kernel: linear
-hyperparameter_tuning: true
-cv_fold: 5
-class_balancing: true
-```
+Optional preprocessing steps applied in declaration order:
 
-```bash
-NiChart_SPARE train -c configs/train_ad.yaml
-```
+| Step | Parameters | Effect |
+|---|---|---|
+| `residualization` | `age_col`, `sex_col`, `icv_col` | Removes Age/Sex/ICV effects using pre-fitted coefficients; the three columns are dropped after |
 
-Experiment output:
+### `model`
 
-```
-models/experiments/<timestamp>_SPARE_AD/
-  config.yaml        ← copy of the config used
-  meta.json          ← run_id, timestamp, git commit, notes
-  prepped.csv        ← prepped training data (saved for inspection/reuse)
-  SPARE_AD_v1.0.joblib
-  metrics.json       ← per-fold CV scores
-```
+| Field | Default | Description |
+|---|---|---|
+| `svm_type` | — | **Required.** `"classification"` or `"regression"` |
+| `svm_kernel` | `"linear"` | SVM kernel: `linear`, `linear_fast`, `rbf`, `poly`, `sigmoid` |
+| `hyperparameter_tuning` | `true` | Run grid search before final training |
+| `train_whole` | `true` | Train a final model on the full dataset after CV |
+| `cv_fold` | `5` | Number of cross-validation folds |
+| `class_balancing` | `true` | Apply class_weight='balanced' (classification only) |
+| `age_bias_correction` | `0` | `0` = none, `1` = Beheshti et al. residual correction, `2` = Cole et al. rescaling (regression only) |
+| `verbose` | `1` | Verbosity level (0–3) |
 
-#### Inference with inline prep
+### `post-processing`
 
-Use `--prep-type` to prep raw data on the fly. `prepped.csv` is saved in the output directory.
+Reserved for future use. Leave as `{}`.
 
-```bash
-NiChart_SPARE test \
-    -t AD \
-    -i data/raw_test.csv \
-    -o results/ \
-    --prep-type CL \
-    --ignore-columns Study,SITE,Sex
-```
+### `output`
 
-```
-results/
-  prepped.csv        ← prepped input (saved for inspection/reuse)
-  predictions.csv
-```
+| Field | Default | Description |
+|---|---|---|
+| `out_dir` | — | **Required.** Output directory, relative to the config file |
+| `out_model_dir` | `""` | Subdirectory inside `out_dir/run_tag/` where the model is saved |
+| `out_csv` | `"predictions.csv"` | Predictions filename (used at inference) |
+| `out_cols` | all | Columns to include in the output CSV (e.g. `["MRID", "SPARE_AD"]`) |
 
-Add a `--notes` label to any training run for later reference:
-
-```bash
-NiChart_SPARE train -c configs/train_ad.yaml -n "baseline linear kernel"
-```
+---
 
 ## SVM kernels
 
@@ -247,11 +302,34 @@ NiChart_SPARE train -c configs/train_ad.yaml -n "baseline linear kernel"
 | `poly` | Polynomial kernel |
 | `sigmoid` | Sigmoid kernel |
 
+---
+
 ## Running the tests
 
 ```bash
 pytest tests/
 ```
+
+---
+
+## Example scripts
+
+Working examples are in `examples/`:
+
+```
+examples/
+  SPARE_AD/
+    training/
+      input/train_config.json
+      run_training.sh         ← bash examples/SPARE_AD/training/run_training.sh
+    testing/
+      input/raw_data.csv
+      run_testing.sh          ← bash examples/SPARE_AD/testing/run_testing.sh
+  SPARE_BA/   …
+  SPARE_DIABETES/   …
+```
+
+---
 
 ## Distribution options
 
@@ -269,24 +347,24 @@ Models are **not** bundled in the pip package. They download lazily, per-task, o
 docker build -t nichart_spare .
 ```
 
-All registered default-version models are downloaded and baked into the image at build time,
-so no internet access is needed at runtime.
+All registered default-version models are downloaded and baked into the image at build time, so no internet access is needed at runtime.
 
 ```bash
 docker run --rm -v $(pwd):/data nichart_spare \
-    test -t AD -i /data/prepped.csv -o /data/results/
+    test -t AD -i /data/raw.csv -o /data/results/
 ```
 
 For Singularity, build from the Docker image or supply a compatible definition file.
 
+---
+
 ## Version alignment
 
-GitHub release tags, Hugging Face repo revision/tags, and `task_registry.yaml` version keys are
-kept aligned (e.g. GitHub tag `v3.0` ↔ HF revision `v3.0` ↔ registry key `v3.0`) so any
-combination of code and model is traceable.
+GitHub release tags, Hugging Face repo revision/tags, and `task_registry.yaml` version keys are kept aligned (e.g. GitHub tag `v3.0` ↔ HF revision `v3.0` ↔ registry key `v3.0`) so any combination of code and model is traceable.
 
-Model weights are hosted on Hugging Face; code is on GitHub. License terms may differ between
-the two — check the HF repo card for each model before use.
+Model weights are hosted on Hugging Face; code is on GitHub. License terms may differ between the two — check the HF repo card for each model before use.
+
+---
 
 ## Publications
 

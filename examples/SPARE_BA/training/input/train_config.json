@@ -17,16 +17,17 @@
   "pre-processing": {},
 
   "model": {
+    "svm_type": "regression",
     "svm_kernel": "linear",
     "hyperparameter_tuning": true,
     "train_whole": true,
     "cv_fold": 5,
     "class_balancing": false,
+    "age_bias_correction": 0,
     "verbose": 1
   },
 
   "post-processing": {
-    "age-bias-corr": {}
   },
 
   "output": {

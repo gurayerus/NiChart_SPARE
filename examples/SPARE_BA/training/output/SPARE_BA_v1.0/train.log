@@ -1,13 +1,13 @@
-[2026-06-30 17:24:07]  Training started
-[2026-06-30 17:24:07]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/train_config.json
-[2026-06-30 17:24:07]  Run tag    : SPARE_BA_v1.0
-[2026-06-30 17:24:07]  SPARE type : BA  |  model: SPARE_BA v1.0
-[2026-06-30 17:24:07]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0
-[2026-06-30 17:24:07]  Prep       : raw_data.csv → prepped.csv
-[2026-06-30 17:24:07]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/prepped.csv
-[2026-06-30 17:24:07]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=False
-[2026-06-30 17:24:07]  Training started
-[2026-06-30 17:24:10]  Training complete (elapsed: 0:00:02)
-[2026-06-30 17:24:10]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/model/SPARE_BA_v1.0.joblib
-[2026-06-30 17:24:10]  Metrics    : metrics.json
-[2026-06-30 17:24:10]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0
+[2026-07-01 12:28:26]  Training started
+[2026-07-01 12:28:26]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/train_config.json
+[2026-07-01 12:28:26]  Run tag    : SPARE_BA_v1.0
+[2026-07-01 12:28:26]  SPARE type : BA  |  model: SPARE_BA v1.0
+[2026-07-01 12:28:26]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0
+[2026-07-01 12:28:26]  Prep       : raw_data.csv -> prepped.csv
+[2026-07-01 12:28:26]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/prepped.csv
+[2026-07-01 12:28:26]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=False
+[2026-07-01 12:28:26]  Training started
+[2026-07-01 12:28:28]  Training complete (elapsed: 0:00:02)
+[2026-07-01 12:28:28]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0/model/SPARE_BA_v1.0.joblib
+[2026-07-01 12:28:28]  Metrics    : metrics.json
+[2026-07-01 12:28:28]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_BA/training/input/../output/SPARE_BA_v1.0

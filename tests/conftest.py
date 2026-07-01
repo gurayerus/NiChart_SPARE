@@ -135,7 +135,7 @@ TRAIN_KWARGS = dict(
 def cl_model(prepped_cl_csv, tmp_path):
     from NiChart_SPARE.train import train_model
     out = str(tmp_path / 'model_cl.joblib')
-    train_model(prepped_cl_csv, out, 'CL', **TRAIN_KWARGS)
+    train_model(prepped_cl_csv, out, 'CL', svm_type='classification', **TRAIN_KWARGS)
     return out
 
 
@@ -143,7 +143,7 @@ def cl_model(prepped_cl_csv, tmp_path):
 def rg_model(prepped_rg_csv, tmp_path):
     from NiChart_SPARE.train import train_model
     out = str(tmp_path / 'model_rg.joblib')
-    train_model(prepped_rg_csv, out, 'RG', **TRAIN_KWARGS)
+    train_model(prepped_rg_csv, out, 'RG', svm_type='regression', **TRAIN_KWARGS)
     return out
 
 
@@ -151,5 +151,5 @@ def rg_model(prepped_rg_csv, tmp_path):
 def cvm_model(prepped_cvm_csv, tmp_path):
     from NiChart_SPARE.train import train_model
     out = str(tmp_path / 'model_cvm.joblib')
-    train_model(prepped_cvm_csv, out, 'CVM', **TRAIN_KWARGS)
+    train_model(prepped_cvm_csv, out, 'CVM', svm_type='classification', **TRAIN_KWARGS)
     return out

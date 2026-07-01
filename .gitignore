@@ -5,8 +5,8 @@ __pycache__/
 */__pycache__/
 Data/
 Output/
+output/
 notebooks/
-*.csv
 !Resources/covparams_scaler_sparecvms.csv
 *.ipynb
 */legacy_models/

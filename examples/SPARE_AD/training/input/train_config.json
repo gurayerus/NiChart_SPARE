@@ -20,12 +20,12 @@
   "pre-processing": {},
 
   "model": {
+    "svm_type": "classification",
     "svm_kernel": "linear",
     "hyperparameter_tuning": true,
     "train_whole": true,
     "cv_fold": 5,
     "class_balancing": true,
-    "bias_correction": 0,
     "verbose": 1
   },
 

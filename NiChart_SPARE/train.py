@@ -26,14 +26,12 @@ from .util import get_metadata, get_preprocessors
 
 VERSION = version("NiChart_SPARE")
 
-REGRESSION_TYPES = frozenset({'RG', 'BA'})
-CLASSIFICATION_TYPES = frozenset({'CL', 'AD', 'CVM', 'HT', 'T2B', 'SM', 'BMI'})
-
 
 def train_model(
     input_file: str,
     model_path: str,
     spare_type: str,
+    svm_type: str = 'classification',
     kernel: str = 'linear',
     tune_hyperparameters: bool = True,
     cv_fold: int = 5,
@@ -79,10 +77,10 @@ def train_model(
         Verbosity level (0–3).
     """
     spare_type = spare_type.upper()
-    if spare_type not in REGRESSION_TYPES | CLASSIFICATION_TYPES:
+    svm_type   = svm_type.lower()
+    if svm_type not in ('classification', 'regression'):
         raise ValueError(
-            f"Unknown spare_type '{spare_type}'. "
-            f"Expected one of: {sorted(REGRESSION_TYPES | CLASSIFICATION_TYPES)}"
+            f"Unknown svm_type '{svm_type}'. Expected 'classification' or 'regression'."
         )
 
     # --- Load prepared data ---
@@ -97,7 +95,7 @@ def train_model(
     validate_dataframe(df, target_column)
 
     # --- Encode, scale, and train ---
-    if spare_type in REGRESSION_TYPES:
+    if svm_type == 'regression':
         X, y, feature_encoder, feature_scaler = preprocess_regression_data(
             df,
             target_column=target_column,
@@ -117,7 +115,7 @@ def train_model(
             verbose=verbose,
         )
 
-    else:  # classification
+    else:  # svm_type == 'classification'
         X, y, feature_encoder, feature_scaler = preprocess_classification_data(
             df,
             target_column=target_column,
@@ -140,7 +138,7 @@ def train_model(
 
     # --- Serialize ---
     meta_data   = get_metadata(
-        spare_type, VERSION, 'SVM', kernel, target_column,
+        spare_type, svm_type, VERSION, 'SVM', kernel, target_column,
         df, tune_hyperparameters, cv_fold, class_balancing, train_whole_set,
         model_tag=model_tag or None,
         model_version=model_version or None,

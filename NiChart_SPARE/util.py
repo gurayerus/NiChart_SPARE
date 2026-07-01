@@ -5,32 +5,31 @@ import importlib
 
 import numpy as np
 
-REGRESSION_TYPES     = frozenset({'RG', 'BA'})
-CLASSIFICATION_TYPES = frozenset({'CL', 'AD', 'CVM', 'HT', 'T2B', 'SM', 'BMI'})
+SVM_TYPES = frozenset({'classification', 'regression'})
 
 
-def get_pipeline_module(spare_type: str):
-    """Return the pipeline module for the given spare_type."""
-    spare_type = spare_type.upper()
-    if spare_type in REGRESSION_TYPES:
+def get_pipeline_module(svm_type: str):
+    """Return the pipeline module for the given svm_type ('classification' or 'regression')."""
+    svm_type = svm_type.lower()
+    if svm_type == 'regression':
         return importlib.import_module('NiChart_SPARE.pipelines.spare_svm_regression')
-    if spare_type in CLASSIFICATION_TYPES:
+    if svm_type == 'classification':
         return importlib.import_module('NiChart_SPARE.pipelines.spare_svm_classification')
     raise ValueError(
-        f"Unsupported spare_type '{spare_type}'. "
-        f"Expected one of: {sorted(REGRESSION_TYPES | CLASSIFICATION_TYPES)}"
+        f"Unsupported svm_type '{svm_type}'. Expected 'classification' or 'regression'."
     )
 
 
 # ---- Model metadata helpers ------------------------------------------------
 
 def get_metadata(
-    spare_type, package_version, model_type, kernel, target_column,
+    spare_type, svm_type, package_version, model_type, kernel, target_column,
     df, tune_hyperparameters, cv_fold, class_balancing, train_whole_set,
     model_tag=None, model_version=None,
 ) -> dict:
     return {
         'spare_type': spare_type,
+        'svm_type':   svm_type,
         'package_version': package_version,
         'model_description': {
             'model_type': model_type,

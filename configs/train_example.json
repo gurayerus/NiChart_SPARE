@@ -20,6 +20,7 @@
   "pre-processing": {},
 
   "model": {
+    "svm_type": "classification",
     "svm_kernel": "linear",
     "hyperparameter_tuning": true,
     "train_whole": true,

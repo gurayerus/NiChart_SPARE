@@ -1,13 +1,13 @@
-[2026-06-30 17:24:12]  Training started
-[2026-06-30 17:24:12]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/train_config.json
-[2026-06-30 17:24:12]  Run tag    : SPARE_DIABETES_v1.0
-[2026-06-30 17:24:12]  SPARE type : CL  |  model: SPARE_DIABETES v1.0
-[2026-06-30 17:24:12]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0
-[2026-06-30 17:24:12]  Prep       : raw_data.csv → prepped.csv
-[2026-06-30 17:24:13]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0/prepped.csv
-[2026-06-30 17:24:13]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=True
-[2026-06-30 17:24:13]  Training started
-[2026-06-30 17:24:16]  Training complete (elapsed: 0:00:02)
-[2026-06-30 17:24:16]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0/model/SPARE_DIABETES_v1.0.joblib
-[2026-06-30 17:24:16]  Metrics    : metrics.json
-[2026-06-30 17:24:16]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0
+[2026-07-01 12:28:34]  Training started
+[2026-07-01 12:28:34]  Config     : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/train_config.json
+[2026-07-01 12:28:34]  Run tag    : SPARE_DIABETES_v1.0
+[2026-07-01 12:28:34]  SPARE type : CL  |  model: SPARE_DIABETES v1.0
+[2026-07-01 12:28:34]  Output dir : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0
+[2026-07-01 12:28:34]  Prep       : raw_data.csv -> prepped.csv
+[2026-07-01 12:28:34]  Prep done  : /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0/prepped.csv
+[2026-07-01 12:28:34]  SVM        : kernel=linear  cv_fold=5  hp_tuning=True  class_bal=True
+[2026-07-01 12:28:34]  Training started
+[2026-07-01 12:28:37]  Training complete (elapsed: 0:00:02)
+[2026-07-01 12:28:37]  Model saved: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0/model/SPARE_DIABETES_v1.0.joblib
+[2026-07-01 12:28:37]  Metrics    : metrics.json
+[2026-07-01 12:28:37]  Done. Output: /home/guraylab/GitHub/gurayerus/NiChart_SPARE/examples/SPARE_DIABETES/training/input/../output/SPARE_DIABETES_v1.0

@@ -17,15 +17,11 @@ from .preprocessing import (
     preprocess_regression_data,
 )
 
-REGRESSION_TYPES = frozenset({'RG', 'BA'})
-
-
 def infer_model(
     input_file: str,
     model_path: str,
     output_dir: str,
     key_variable: str = 'MRID',
-    append_spare_tag: str = '',
     ) -> pd.DataFrame:
     """
     Apply a trained model to a prepared input CSV and write predictions.
@@ -43,8 +39,6 @@ def infer_model(
         Created automatically if it does not exist.
     key_variable : str
         Column that uniquely identifies each sample (default: MRID).
-    append_spare_tag : str
-        When non-empty, rename SPARE_<type> -> SPARE_<tag> in output.
 
     Returns
     -------
@@ -62,6 +56,7 @@ def infer_model(
     model       = model_info['model']
     bias_terms  = model_info['bias']
     spare_type  = meta_data['spare_type']
+    svm_type    = meta_data.get('svm_type', 'regression' if spare_type in {'RG', 'BA'} else 'classification')
     target_col  = meta_data['training_data_description']['target_column']
     feature_names = meta_data['training_data_description']['feature_names']
 
@@ -109,7 +104,7 @@ def infer_model(
     # --- Apply saved encoder and scaler ---
     feature_df = df.drop(columns=[key_variable])
 
-    if spare_type in REGRESSION_TYPES:
+    if svm_type == 'regression':
         X, y, _, _ = preprocess_regression_data(
             df=feature_df,
             target_column=target_col,
@@ -136,10 +131,10 @@ def infer_model(
             predictions = (predictions - bias_terms['intercept']) / bias_terms['coef']
 
     # --- Build output DataFrame ---
-    score_col = f"SPARE_{append_spare_tag if append_spare_tag else spare_type}"
+    score_col = f"SPARE_{spare_type}"
     out = pd.DataFrame({key_variable: df[key_variable].values, score_col: predictions})
 
-    if spare_type not in REGRESSION_TYPES:
+    if svm_type != 'regression':
         out[f"{score_col}_decision_function"] = model.decision_function(X)
 
     if has_target and y is not None:

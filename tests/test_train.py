@@ -4,24 +4,25 @@ import joblib
 import os
 import pytest
 
-from NiChart_SPARE.train import train_model, CLASSIFICATION_TYPES, REGRESSION_TYPES
+from NiChart_SPARE.train import train_model
+from NiChart_SPARE.util import SVM_TYPES
 from tests.conftest import TRAIN_KWARGS
 
 
 class TestModelFileCreated:
     def test_cl_model_saved(self, prepped_cl_csv, tmp_path):
         out = str(tmp_path / 'model.joblib')
-        train_model(prepped_cl_csv, out, 'CL', **TRAIN_KWARGS)
+        train_model(prepped_cl_csv, out, 'CL', svm_type='classification', **TRAIN_KWARGS)
         assert os.path.exists(out)
 
     def test_rg_model_saved(self, prepped_rg_csv, tmp_path):
         out = str(tmp_path / 'model.joblib')
-        train_model(prepped_rg_csv, out, 'RG', **TRAIN_KWARGS)
+        train_model(prepped_rg_csv, out, 'RG', svm_type='regression', **TRAIN_KWARGS)
         assert os.path.exists(out)
 
     def test_cvm_model_saved(self, prepped_cvm_csv, tmp_path):
         out = str(tmp_path / 'model.joblib')
-        train_model(prepped_cvm_csv, out, 'CVM', **TRAIN_KWARGS)
+        train_model(prepped_cvm_csv, out, 'CVM', svm_type='classification', **TRAIN_KWARGS)
         assert os.path.exists(out)
 
 
@@ -29,6 +30,10 @@ class TestModelMetadata:
     def test_spare_type_stored(self, cl_model):
         data = joblib.load(cl_model)
         assert data['meta_data']['spare_type'] == 'CL'
+
+    def test_svm_type_stored(self, cl_model):
+        data = joblib.load(cl_model)
+        assert data['meta_data']['svm_type'] == 'classification'
 
     def test_feature_names_stored(self, cl_model):
         data = joblib.load(cl_model)
@@ -53,10 +58,10 @@ class TestModelMetadata:
 
 
 class TestValidation:
-    def test_unknown_spare_type_raises(self, prepped_cl_csv, tmp_path):
-        with pytest.raises(ValueError, match='Unknown spare_type'):
+    def test_unknown_svm_type_raises(self, prepped_cl_csv, tmp_path):
+        with pytest.raises(ValueError, match='Unknown svm_type'):
             train_model(prepped_cl_csv, str(tmp_path / 'model.joblib'),
-                        'INVALID', **TRAIN_KWARGS)
+                        'CL', svm_type='invalid', **TRAIN_KWARGS)
 
-    def test_type_sets_are_disjoint(self):
-        assert CLASSIFICATION_TYPES.isdisjoint(REGRESSION_TYPES)
+    def test_svm_types_set(self):
+        assert SVM_TYPES == {'classification', 'regression'}
